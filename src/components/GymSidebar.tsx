@@ -1,6 +1,8 @@
 
+"use client";
 import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, 
   Dumbbell, 
@@ -23,7 +25,7 @@ import {
   SidebarHeader,
   SidebarTrigger
 } from '@/components/ui/sidebar';
-import { useAuth } from '@/App';
+import { useAuth } from '@/app/providers';
 
 type SidebarItem = {
   icon: React.ElementType;
@@ -44,19 +46,19 @@ const sidebarItems: SidebarItem[] = [
 ];
 
 export function GymSidebar() {
-  const location = useLocation();
-  const navigate = useNavigate();
+  const pathname = usePathname();
+  const router = useRouter();
   const { logout } = useAuth();
   
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    router.push('/login');
   };
   
   return (
     <Sidebar className="border-r" data-testid="sidebar">
       <SidebarHeader className="flex h-16 items-center px-4 border-b">
-        <Link to="/" className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2">
           <Dumbbell className="h-6 w-6 text-fitgym-white" />
           <span className="font-bold text-lg text-fitgym-white">FitGym</span>
         </Link>
@@ -69,12 +71,12 @@ export function GymSidebar() {
       <SidebarContent className="p-2">
         <div className="flex flex-col gap-1">
           {sidebarItems.map((item) => (
-            <Link key={item.href} to={item.href}>
+            <Link key={item.href} href={item.href}>
               <Button
                 variant="ghost"
                 className={cn(
                   "w-full justify-start gap-2",
-                  location.pathname === item.href && "bg-accent text-accent-foreground"
+                  pathname === item.href && "bg-accent text-accent-foreground"
                 )}
               >
                 <item.icon className="h-5 w-5" />

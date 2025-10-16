@@ -1,5 +1,6 @@
 
-import { Outlet, useNavigate } from 'react-router-dom';
+"use client";
+import { useRouter } from 'next/navigation';
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { GymSidebar } from '@/components/GymSidebar';
 import { Bell, User, Settings, LogOut } from 'lucide-react';
@@ -14,14 +15,14 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/App';
+import { useAuth } from '@/app/providers';
 import { useState, useEffect } from 'react';
 import { format, isToday, isTomorrow, addHours } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { supabase } from "@/lib/supabase";
 
-export function GymLayout() {
-  const navigate = useNavigate();
+export function GymLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const { logout } = useAuth();
   
   // Estado para eventos próximos
@@ -107,7 +108,7 @@ export function GymLayout() {
   
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    router.push('/login');
   };
   
   return (
@@ -155,7 +156,7 @@ export function GymLayout() {
                         <DropdownMenuItem 
                           key={evento.id} 
                           className="flex flex-col items-start p-3 cursor-pointer"
-                          onClick={() => navigate('/calendario')}
+                          onClick={() => router.push('/calendario')}
                         >
                           <div className="flex items-center justify-between w-full">
                             <div className="flex-1">
@@ -188,7 +189,7 @@ export function GymLayout() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     className="text-center justify-center text-blue-600 hover:text-blue-700"
-                    onClick={() => navigate('/calendario')}
+                    onClick={() => router.push('/calendario')}
                   >
                     Ver todos los eventos
                   </DropdownMenuItem>
@@ -213,11 +214,11 @@ export function GymLayout() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate("/perfil")}>
+                  <DropdownMenuItem onClick={() => router.push("/perfil")}>
                     <User className="mr-2 h-4 w-4" />
                     <span>Perfil</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/configuracion")}>
+                  <DropdownMenuItem onClick={() => router.push("/configuracion")}>
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Configuración</span>
                   </DropdownMenuItem>
@@ -234,7 +235,7 @@ export function GymLayout() {
             </div>
           </header>
           <main className="flex-1 p-4 md:p-6 overflow-auto">
-            <Outlet />
+            {children}
           </main>
         </div>
       </div>
