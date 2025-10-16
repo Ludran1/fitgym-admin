@@ -18,7 +18,7 @@ export function Logo({
 }: LogoProps) {
   return (
     <div
-      className={`inline-flex items-center gap-2 rounded-lg border bg-muted/30 px-2 py-1 ${className}`}
+      className={`inline-flex items-center gap-2 rounded-lg px-2 py-1 ${className}`}
       aria-label="FitGym"
     >
       <Image

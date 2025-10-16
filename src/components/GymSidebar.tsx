@@ -80,9 +80,9 @@ export function GymSidebar() {
 
   return (
     <Sidebar className="border-r" variant="floating" collapsible="icon" data-testid="sidebar">
-      <SidebarHeader className="flex h-16 items-center px-4 border-b">
+      <SidebarHeader className="flex h-16 items-center px-4">
         <Link href="/" className="flex items-center gap-2">
-          <Logo withText={false} size={24} textClassName="text-fitgym-white" />
+          <Logo withText={state !== 'collapsed'} size={24} textClassName="text-fitgym-white" />
         </Link>
         <div className="ml-auto flex items-center gap-1 md:hidden">
           <SidebarTrigger>
