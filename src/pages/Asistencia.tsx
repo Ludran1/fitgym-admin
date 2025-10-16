@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -22,12 +23,14 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Search, 
-  Fingerprint, 
+  QrCode, 
   UserCheck, 
   Clock, 
   Calendar, 
   CheckCircle, 
-  XCircle 
+  XCircle,
+  Camera,
+  CameraOff
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Database } from "@/lib/supabase";
@@ -46,8 +49,16 @@ export default function Asistencia() {
   const [dniInput, setDniInput] = useState("");
   const [clientes, setClientes] = useState<Database["public"]["Tables"]["clientes"]["Row"][]>([]);
   const [asistencias, setAsistencias] = useState<Database["public"]["Tables"]["asistencias"]["Row"][]>([]);
-  const [modoAsistencia, setModoAsistencia] = useState<"huella" | "dni">("dni");
+  const [modoAsistencia, setModoAsistencia] = useState<"qr" | "dni">("dni");
+  const [qrManual, setQrManual] = useState("");
+  const [cameraEnabled, setCameraEnabled] = useState(false);
   const { toast } = useToast();
+
+  // Escáner QR (carga dinámica en cliente)
+  const QrScanner = dynamic(
+    () => import("@yudiel/react-qr-scanner").then((mod) => mod.Scanner),
+    { ssr: false }
+  );
 
   useEffect(() => {
     loadClientes();
@@ -120,7 +131,7 @@ export default function Asistencia() {
     setAsistencias((data || []) as Database["public"]["Tables"]["asistencias"]["Row"][]);
   };
 
-  const registrarAsistencia = async (cliente: Database["public"]["Tables"]["clientes"]["Row"], tipo: "huella" | "dni") => {
+  const registrarAsistencia = async (cliente: Database["public"]["Tables"]["clientes"]["Row"], tipo: "qr" | "dni") => {
     if (cliente.estado === "vencida" || cliente.estado === "suspendida") {
       toast({
         variant: "destructive",
@@ -229,32 +240,51 @@ export default function Asistencia() {
 
     await registrarAsistencia(cliente as Database["public"]["Tables"]["clientes"]["Row"], "dni");
   };
-
-  const simularHuella = async () => {
-    // Simula la lectura de una huella digital usando clientes reales
-    if (clientes.length === 0) {
-      await loadClientes();
-    }
-
-    const clienteAleatorio = clientes[Math.floor(Math.random() * clientes.length)];
-
-    if (!clienteAleatorio) {
+  
+  const registrarPorQRTexto = async (texto: string) => {
+    const contenido = texto.trim();
+    if (!contenido) {
       toast({
         variant: "destructive",
-        title: "No hay clientes",
-        description: "Agrega clientes para poder simular huella.",
+        title: "QR vacío",
+        description: "El contenido del QR no es válido.",
       });
       return;
     }
 
-    toast({
-      title: "Huella detectada",
-      description: "Procesando identificación...",
-    });
+    let cliente: Database["public"]["Tables"]["clientes"]["Row"] | null = null;
 
-    setTimeout(() => {
-      registrarAsistencia(clienteAleatorio, "huella");
-    }, 1500);
+    if (contenido.startsWith("CLIENT:")) {
+      const id = contenido.slice("CLIENT:".length);
+      const { data, error } = await supabase
+        .from("clientes")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+      if (error) {
+        toast({ variant: "destructive", title: "Error buscando cliente", description: error.message });
+        return;
+      }
+      cliente = (data || null) as any;
+    } else {
+      const { data, error } = await supabase
+        .from("clientes")
+        .select("*")
+        .eq("dni", contenido)
+        .maybeSingle();
+      if (error) {
+        toast({ variant: "destructive", title: "Error buscando cliente", description: error.message });
+        return;
+      }
+      cliente = (data || null) as any;
+    }
+
+    if (!cliente) {
+      toast({ variant: "destructive", title: "Cliente no encontrado", description: "El QR no coincide con ningún cliente." });
+      return;
+    }
+
+    await registrarAsistencia(cliente, "qr");
   };
 
   // Obtener clientes de las asistencias (unir asistencias con clientes)
@@ -272,7 +302,7 @@ export default function Asistencia() {
       const cliente = clientes.find((c) => c.id === asistencia.cliente_id);
       const fecha = new Date(asistencia.fecha_asistencia);
       const hora = fecha.toTimeString().split(" ")[0];
-      const tipo = asistencia.notas === "huella" ? "huella" : "dni";
+      const tipo = asistencia.notas === "qr" ? "qr" : "dni";
       return {
         asistencia: {
           id: asistencia.id,
@@ -289,7 +319,7 @@ export default function Asistencia() {
       <div className="flex flex-col space-y-2">
         <h2 className="text-3xl font-bold">Control de Asistencia</h2>
         <p className="text-muted-foreground">
-          Registro de entradas al gimnasio mediante huella digital o DNI
+          Registro de entradas al gimnasio mediante código QR o DNI
         </p>
       </div>
 
@@ -312,12 +342,12 @@ export default function Asistencia() {
                 Por DNI
               </Button>
               <Button
-                variant={modoAsistencia === "huella" ? "default" : "outline"}
+                variant={modoAsistencia === "qr" ? "default" : "outline"}
                 className="flex-1"
-                onClick={() => setModoAsistencia("huella")}
+                onClick={() => setModoAsistencia("qr")}
               >
-                <Fingerprint className="mr-2 h-4 w-4" />
-                Por Huella
+                <QrCode className="mr-2 h-4 w-4" />
+                Por QR
               </Button>
             </div>
 
@@ -337,15 +367,53 @@ export default function Asistencia() {
               </div>
             ) : (
               <div className="space-y-4">
-                <Button
-                  className="w-full h-20 text-lg"
-                  onClick={simularHuella}
-                >
-                  <Fingerprint className="mr-2 h-6 w-6" />
-                  Colocar dedo en el lector
-                </Button>
-                <div className="text-sm text-muted-foreground text-center">
-                  Coloca tu dedo en el lector de huella para registrar tu asistencia.
+                <div className="flex gap-2">
+                  <Button
+                    variant={cameraEnabled ? "default" : "outline"}
+                    className="flex-1"
+                    onClick={() => setCameraEnabled((v) => !v)}
+                  >
+                    {cameraEnabled ? (
+                      <>
+                        <CameraOff className="mr-2 h-4 w-4" />
+                        Desactivar cámara
+                      </>
+                    ) : (
+                      <>
+                        <Camera className="mr-2 h-4 w-4" />
+                        Activar cámara
+                      </>
+                    )}
+                  </Button>
+                </div>
+                {cameraEnabled && (
+                  <div className="rounded-md border overflow-hidden">
+                    <QrScanner
+                      constraints={{ facingMode: "environment" }}
+                      scanDelay={500}
+                      onScan={(detected) => {
+                        const text = detected?.[0]?.rawValue || "";
+                        if (text) {
+                          registrarPorQRTexto(text);
+                        }
+                      }}
+                      onError={() => {
+                        /* Silencio errores menores de cámara */
+                      }}
+                      styles={{ container: { width: "100%", aspectRatio: "16/9" } }}
+                    />
+                  </div>
+                )}
+                <div className="flex space-x-2">
+                  <Input
+                    placeholder="Pega el contenido del QR o DNI"
+                    value={qrManual}
+                    onChange={(e) => setQrManual(e.target.value)}
+                  />
+                  <Button onClick={() => registrarPorQRTexto(qrManual)}>Verificar</Button>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Escanea el código QR del cliente con la cámara o pega su contenido manualmente.
                 </div>
               </div>
             )}
@@ -432,12 +500,12 @@ export default function Asistencia() {
                             variant="outline"
                             className="flex items-center space-x-1"
                           >
-                            {asistencia.tipo === "huella" ? (
-                              <Fingerprint className="h-3 w-3 mr-1" />
+                            {asistencia.tipo === "qr" ? (
+                              <QrCode className="h-3 w-3 mr-1" />
                             ) : (
                               <UserCheck className="h-3 w-3 mr-1" />
                             )}
-                            {asistencia.tipo === "huella" ? "Huella" : "DNI"}
+                            {asistencia.tipo === "qr" ? "QR" : "DNI"}
                           </Badge>
                         </TableCell>
                       </TableRow>

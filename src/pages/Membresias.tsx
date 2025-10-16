@@ -168,7 +168,7 @@ const Membresias = () => {
             </p>
           </div>
         </div>
-        
+
         <Dialog open={dialogoAbierto} onOpenChange={setDialogoAbierto}>
           <DialogTrigger asChild>
             <Button className="flex items-center gap-2 w-full sm:w-auto">
@@ -185,14 +185,14 @@ const Membresias = () => {
                 Configura los detalles de la membresía
               </DialogDescription>
             </DialogHeader>
-            
+
             <div className="space-y-3 md:space-y-4">
               <div>
                 <Label htmlFor="nombre" className="text-sm">Nombre de la Membresía</Label>
                 <Input
                   id="nombre"
                   value={nuevaMembresia.nombre}
-                  onChange={(e) => setNuevaMembresia({...nuevaMembresia, nombre: e.target.value})}
+                  onChange={(e) => setNuevaMembresia({ ...nuevaMembresia, nombre: e.target.value })}
                   placeholder="Ej: Membresía Premium"
                   className="text-sm"
                 />
@@ -201,9 +201,9 @@ const Membresias = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                 <div>
                   <Label htmlFor="tipo" className="text-sm">Tipo de Membresía</Label>
-                  <Select 
-                    value={nuevaMembresia.tipo} 
-                    onValueChange={(value) => setNuevaMembresia({...nuevaMembresia, tipo: value as 'mensual' | 'trimestral'})}
+                  <Select
+                    value={nuevaMembresia.tipo}
+                    onValueChange={(value) => setNuevaMembresia({ ...nuevaMembresia, tipo: value as 'mensual' | 'trimestral' })}
                   >
                     <SelectTrigger className="text-sm">
                       <SelectValue placeholder="Seleccionar tipo" />
@@ -219,9 +219,9 @@ const Membresias = () => {
                 </div>
                 <div>
                   <Label htmlFor="modalidad" className="text-sm">Modalidad de Acceso</Label>
-                  <Select 
-                    value={nuevaMembresia.modalidad} 
-                    onValueChange={(value) => setNuevaMembresia({...nuevaMembresia, modalidad: value as 'diario' | 'interdiario' | 'libre'})}
+                  <Select
+                    value={nuevaMembresia.modalidad}
+                    onValueChange={(value) => setNuevaMembresia({ ...nuevaMembresia, modalidad: value as 'diario' | 'interdiario' | 'libre' })}
                   >
                     <SelectTrigger className="text-sm">
                       <SelectValue placeholder="Seleccionar modalidad" />
@@ -245,7 +245,7 @@ const Membresias = () => {
                 <Textarea
                   id="descripcion"
                   value={nuevaMembresia.descripcion}
-                  onChange={(e) => setNuevaMembresia({...nuevaMembresia, descripcion: e.target.value})}
+                  onChange={(e) => setNuevaMembresia({ ...nuevaMembresia, descripcion: e.target.value })}
                   placeholder="Describe los beneficios de esta membresía"
                   className="text-sm"
                 />
@@ -258,7 +258,7 @@ const Membresias = () => {
                     id="precio"
                     type="number"
                     value={nuevaMembresia.precio}
-                    onChange={(e) => setNuevaMembresia({...nuevaMembresia, precio: Number(e.target.value)})}
+                    onChange={(e) => setNuevaMembresia({ ...nuevaMembresia, precio: Number(e.target.value) })}
                     placeholder="0"
                     className="text-sm"
                   />
@@ -271,7 +271,7 @@ const Membresias = () => {
                     id="duracion"
                     type="number"
                     value={nuevaMembresia.duracion}
-                    onChange={(e) => setNuevaMembresia({...nuevaMembresia, duracion: Number(e.target.value)})}
+                    onChange={(e) => setNuevaMembresia({ ...nuevaMembresia, duracion: Number(e.target.value) })}
                     placeholder="1"
                     className="text-sm"
                   />
@@ -346,7 +346,7 @@ const Membresias = () => {
             {membresias.map((membresia) => {
               const config = obtenerConfiguracionTipo(membresia.tipo);
               const IconoTipo = config.icon;
-              
+
               return (
                 <Card key={membresia.id} className={`relative ${!membresia.activa ? 'opacity-60' : ''}`}>
                   <CardHeader className="pb-3">
@@ -371,9 +371,9 @@ const Membresias = () => {
                         <Button variant="ghost" size="sm" onClick={() => editarMembresiaHandler(membresia)}>
                           <Edit className="h-3 w-3 md:h-4 md:w-4" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           className="text-red-500"
                           onClick={() => { setMembresiaAEliminar(membresia); setConfirmDeleteOpen(true); }}
                         >
@@ -386,10 +386,9 @@ const Membresias = () => {
                     <p className="text-xs md:text-sm text-muted-foreground line-clamp-2">
                       {membresia.descripcion}
                     </p>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4 text-green-600" />
                         <span className="text-xl md:text-2xl font-bold">S/ {membresia.precio}</span>
                       </div>
                       <div className="text-xs md:text-sm text-muted-foreground">
@@ -418,7 +417,7 @@ const Membresias = () => {
                       </div>
                     </div>
 
-                    <Button 
+                    <Button
                       variant={membresia.activa ? "outline" : "default"}
                       className="w-full text-xs md:text-sm"
                       onClick={() => toggleEstadoMembresia(membresia.id)}
@@ -439,7 +438,7 @@ const Membresias = () => {
                 .filter(m => m.tipo === tipo.value)
                 .map((membresia) => {
                   const IconoTipo = tipo.icon;
-                  
+
                   return (
                     <Card key={membresia.id} className={`relative ${!membresia.activa ? 'opacity-60' : ''}`}>
                       <CardHeader>
@@ -459,9 +458,9 @@ const Membresias = () => {
                             <Button variant="ghost" size="icon" onClick={() => editarMembresiaHandler(membresia)}>
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               className="text-red-500"
                               onClick={() => { setMembresiaAEliminar(membresia); setConfirmDeleteOpen(true); }}
                             >
@@ -474,7 +473,7 @@ const Membresias = () => {
                         <p className="text-sm text-muted-foreground">
                           {membresia.descripcion}
                         </p>
-                        
+
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <DollarSign className="h-4 w-4 text-green-600" />
@@ -506,7 +505,7 @@ const Membresias = () => {
                           </div>
                         </div>
 
-                        <Button 
+                        <Button
                           variant={membresia.activa ? "outline" : "default"}
                           className="w-full"
                           onClick={() => toggleEstadoMembresia(membresia.id)}

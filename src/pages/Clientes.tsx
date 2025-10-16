@@ -22,7 +22,6 @@ export default function Clientes() {
     onSubmit,
     handleAddNew,
     membresiasDisponibles,
-    saveCliente,
   } = useClientes();
 
   return (
@@ -49,7 +48,6 @@ export default function Clientes() {
         onSubmit={onSubmit}
         clienteActual={clienteActual}
         membresiasDisponibles={membresiasDisponibles}
-        saveCliente={saveCliente}
       />
 
       <ConfirmationDialog

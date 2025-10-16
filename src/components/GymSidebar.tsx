@@ -3,26 +3,22 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  Dumbbell, 
-  MessageSquare, 
-  Users, 
-  Calendar, 
-  Settings, 
+import {
+  LayoutDashboard,
+  Dumbbell,
+  MessageSquare,
+  Users,
+  Calendar,
+  Settings,
   Bot,
   Menu,
-  LogOut,
   Fingerprint,
   CreditCard,
   User
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarHeader,
   SidebarTrigger,
   SidebarGroup,
@@ -43,17 +39,32 @@ type SidebarItem = {
   href: string;
 };
 
-const sidebarItems: SidebarItem[] = [
-  { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
-  { icon: User, label: 'Perfil', href: '/perfil' },
-  { icon: Fingerprint, label: 'Asistencia', href: '/asistencia' },
-  { icon: Users, label: 'Clientes', href: '/clientes' },
-  { icon: CreditCard, label: 'Membresías', href: '/membresias' },
-  { icon: Dumbbell, label: 'Ejercicios', href: '/ejercicios' },
-  { icon: MessageSquare, label: 'WhatsApp', href: '/whatsapp' },
-  { icon: Calendar, label: 'Calendario', href: '/calendario' },
-  { icon: Bot, label: 'ChatBot', href: '/chatbot' },
-  { icon: Settings, label: 'Configuración', href: '/configuracion' },
+const sidebarSections: { label: string; items: SidebarItem[] }[] = [
+  {
+    label: 'Principal',
+    items: [
+      { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
+      { icon: User, label: 'Perfil', href: '/perfil' },
+    ],
+  },
+  {
+    label: 'Gestión',
+    items: [
+      { icon: Fingerprint, label: 'Asistencia', href: '/asistencia' },
+      { icon: Users, label: 'Clientes', href: '/clientes' },
+      { icon: CreditCard, label: 'Membresías', href: '/membresias' },
+      { icon: Dumbbell, label: 'Ejercicios', href: '/ejercicios' },
+      { icon: Calendar, label: 'Calendario', href: '/calendario' },
+    ],
+  },
+  {
+    label: 'Comunicaciones',
+    items: [
+      { icon: MessageSquare, label: 'WhatsApp', href: '/whatsapp' },
+      { icon: Bot, label: 'ChatBot', href: '/chatbot' },
+      { icon: Settings, label: 'Configuración', href: '/configuracion' },
+    ],
+  },
 ];
 
 export function GymSidebar() {
@@ -61,14 +72,14 @@ export function GymSidebar() {
   const router = useRouter();
   const { logout } = useAuth();
   const { state } = useSidebar();
-  
+
   const handleLogout = () => {
     logout();
     router.push('/login');
   };
-  
+
   return (
-    <Sidebar className="border-r" collapsible="icon" data-testid="sidebar">
+    <Sidebar className="border-r" variant="floating" collapsible="icon" data-testid="sidebar">
       <SidebarHeader className="flex h-16 items-center px-4 border-b">
         <Link href="/" className="flex items-center gap-2">
           <Logo withText={state !== 'collapsed'} size={24} textClassName="text-fitgym-white" />
@@ -79,42 +90,38 @@ export function GymSidebar() {
           </SidebarTrigger>
         </div>
       </SidebarHeader>
-      <SidebarContent className="p-2">
-        <SidebarGroup>
-          <SidebarGroupLabel>Menú</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {sidebarItems.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname === item.href}
-                    tooltip={item.label}
-                  >
-                    <Link href={item.href} className="flex items-center gap-2">
-                      <item.icon className="h-5 w-5" />
-                      <span>{item.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+      <SidebarContent className="p-3 md:p-4">
+        {sidebarSections.map((section, idx) => (
+          <SidebarGroup key={section.label}>
+            <SidebarGroupLabel className="text-xs tracking-wide uppercase text-sidebar-foreground/60">
+              {section.label}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {section.items.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname === item.href}
+                      tooltip={item.label}
+                      size="lg"
+                      className="rounded-lg gap-3"
+                    >
+                      <Link href={item.href} className="flex items-center gap-3">
+                        <span className="inline-flex"><item.icon className="h-5 w-5" /></span>
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+            {idx < sidebarSections.length - 1 && (
+              <SidebarSeparator />
+            )}
+          </SidebarGroup>
+        ))}
       </SidebarContent>
-      <SidebarFooter className="p-2 border-t">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={handleLogout}
-              tooltip="Cerrar Sesión"
-            >
-              <LogOut className="h-5 w-5 text-red-500" />
-              <span className="text-red-500">Cerrar Sesión</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
     </Sidebar>
   );
 }

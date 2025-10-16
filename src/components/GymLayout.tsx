@@ -112,12 +112,15 @@ export function GymLayout({ children }: { children: React.ReactNode }) {
   };
   
   return (
-    <SidebarProvider>
+    <SidebarProvider style={{
+      // Sidebar más ancho en desktop
+      ['--sidebar-width']: '20rem',
+    } as React.CSSProperties}>
       <div className="min-h-screen flex w-full">
         <GymSidebar />
         <SidebarRail />
         <div className="flex-1 flex flex-col">
-          <header className="h-16 border-b flex items-center px-4 md:px-6 gap-4 justify-between">
+          <header className="h-16 border-b flex items-center px-4 md:px-6 gap-4 justify-between bg-accent/40 backdrop-blur">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="md:hidden" />
               <h1 className="text-xl md:text-2xl font-bold">FitGym</h1>

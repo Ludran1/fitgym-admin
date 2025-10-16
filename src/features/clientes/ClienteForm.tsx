@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,12 +17,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import type { Database } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 type Cliente = Database['public']['Tables']['clientes']['Row'];
-import { useMembresias } from "@/hooks/useMembresias";
-import { format, addMonths } from "date-fns";
-import { useToast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
+import { format, addMonths, parse } from "date-fns";
+import QRCode from "react-qr-code";
+// Usamos el datepicker nativo del navegador con Input type="date"
+
 
 export const formSchema = z.object({
   nombre: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres" }),
@@ -30,8 +30,8 @@ export const formSchema = z.object({
   telefono: z.string().min(9, { message: "El teléfono debe tener al menos 9 caracteres" }),
   dni: z
     .string()
-    .optional()
-    .refine((val) => !val || /^\d{7,20}$/.test(val), {
+    .min(1, { message: "El DNI es requerido" })
+    .refine((val) => /^\d{7,20}$/.test(val), {
       message: "El DNI debe contener entre 7 y 20 dígitos",
     }),
   fecha_nacimiento: z.string().min(1, { message: "La fecha de nacimiento es requerida" }),
@@ -71,7 +71,7 @@ export function ClienteForm({ isOpen, onOpenChange, onSubmit, clienteActual, mem
     const membresiaSeleccionada = membresiasDisponibles.find(m => m.id === membresiaId);
     if (membresiaSeleccionada && membresiaSeleccionada.duracion) {
       const fechaInicioStr = form.getValues("fecha_inicio") || format(new Date(), "yyyy-MM-dd");
-      const fechaInicio = new Date(fechaInicioStr);
+      const fechaInicio = parse(fechaInicioStr, "yyyy-MM-dd", new Date());
       const fechaVencimiento = addMonths(fechaInicio, membresiaSeleccionada.duracion);
       return format(fechaVencimiento, "yyyy-MM-dd");
     }
@@ -118,97 +118,35 @@ export function ClienteForm({ isOpen, onOpenChange, onSubmit, clienteActual, mem
     }
   }, [clienteActual, form]);
 
-  const { toast } = useToast();
-  const [agentStatus, setAgentStatus] = useState<'idle' | 'checking' | 'online' | 'offline'>("idle");
-  const [enrollState, setEnrollState] = useState<'idle' | 'connecting' | 'enrolling' | 'success' | 'error'>("idle");
-  const [enrollMessage, setEnrollMessage] = useState<string>("");
-  const [enrollDate, setEnrollDate] = useState<string | null>(null);
-  const [isEnrolling, setIsEnrolling] = useState<boolean>(false);
-  const AGENT_URL = (import.meta as any).env?.VITE_AGENT_URL || "http://localhost:5599";
 
-  const handleSubmit = form.handleSubmit((values) => {
+  const handleSubmit = form.handleSubmit(async (values) => {
+    const dni = (values.dni || "").trim();
+    if (dni) {
+      let query = supabase
+        .from("clientes")
+        .select("id")
+        .eq("dni", dni);
+      if (clienteActual?.id) {
+        query = query.neq("id", clienteActual.id);
+      }
+      const { data, error } = await query;
+      if (error) {
+        form.setError("dni", {
+          type: "manual",
+          message: `Error verificando DNI: ${error.message}`,
+        });
+        return;
+      }
+      if (data && data.length > 0) {
+        form.setError("dni", {
+          type: "manual",
+          message: "El DNI ya está registrado",
+        });
+        return;
+      }
+    }
     onSubmit(values);
   });
-
-  const checkAgentHealth = async () => {
-    try {
-      setAgentStatus("checking");
-      const res = await fetch(`${AGENT_URL}/health`);
-      if (!res.ok) throw new Error("Agente no disponible");
-      setAgentStatus("online");
-      return true;
-    } catch (e) {
-      setAgentStatus("offline");
-      return false;
-    }
-  };
-
-  const enrollFingerprint = async (clientId: string) => {
-    try {
-      setIsEnrolling(true);
-      setEnrollState("connecting");
-      setEnrollMessage("Conectando con el agente...");
-      const ok = await checkAgentHealth();
-      if (!ok) {
-        setEnrollState("error");
-        setEnrollMessage("El agente no está disponible. Verifica que esté ejecutándose.");
-        toast({ title: "Agente no disponible", description: "No se pudo conectar con el agente local.", variant: "destructive" });
-        setIsEnrolling(false);
-        return;
-      }
-
-      setEnrollState("enrolling");
-      setEnrollMessage("Capturando y subiendo la huella...");
-      const res = await fetch(`${AGENT_URL}/enroll`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ client_id: clientId })
-      });
-
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "Error al enrolar huella");
-      }
-
-      setEnrollState("success");
-      const now = new Date();
-      setEnrollDate(format(now, "yyyy-MM-dd HH:mm"));
-      setEnrollMessage("Huella enrolada correctamente.");
-      toast({ title: "Huella enrolada", description: "La huella ha sido enrolada exitosamente." });
-    } catch (err: any) {
-      console.error(err);
-      setEnrollState("error");
-      setEnrollMessage(err?.message || "No se pudo enrolar la huella.");
-      toast({ title: "Error", description: "No se pudo enrolar la huella.", variant: "destructive" });
-    } finally {
-      setIsEnrolling(false);
-    }
-  };
-
-  const handleGuardarYEnrolar = form.handleSubmit(async (values) => {
-    try {
-      if (!saveCliente) {
-        toast({ title: "Acción no disponible", description: "No se puede guardar el cliente desde este formulario.", variant: "destructive" });
-        return;
-      }
-      const clienteGuardado = await saveCliente(values, { closeDialog: false });
-      if (!clienteGuardado?.id) {
-        toast({ title: "Error", description: "No se obtuvo el ID del cliente.", variant: "destructive" });
-        return;
-      }
-      await enrollFingerprint(clienteGuardado.id);
-    } catch (e) {
-      // manejo de errores ya gestionado
-    }
-  });
-
-  const handleActualizarHuella = async () => {
-    if (!clienteActual?.id) {
-      toast({ title: "Cliente requerido", description: "Guarda el cliente antes de enrolar la huella.", variant: "destructive" });
-      return;
-    }
-    await enrollFingerprint(clienteActual.id);
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -224,10 +162,11 @@ export function ClienteForm({ isOpen, onOpenChange, onSubmit, clienteActual, mem
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Columna 1: Datos personales */}
-              <div className="space-y-3 md:space-y-4">
+              <div className="space-y-4 md:space-y-6">
+                <p className="text-sm font-medium text-muted-foreground">Datos personales</p>
                 <FormField
                   control={form.control}
                   name="nombre"
@@ -272,7 +211,7 @@ export function ClienteForm({ isOpen, onOpenChange, onSubmit, clienteActual, mem
                   name="dni"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm">DNI (opcional)</FormLabel>
+                      <FormLabel className="text-sm">DNI</FormLabel>
                       <FormControl>
                         <Input placeholder="12345678" className="text-sm" {...field} />
                       </FormControl>
@@ -296,7 +235,8 @@ export function ClienteForm({ isOpen, onOpenChange, onSubmit, clienteActual, mem
               </div>
 
               {/* Columna 2: Membresía y fechas */}
-              <div className="space-y-3 md:space-y-4">
+              <div className="space-y-4 md:space-y-6">
+                <p className="text-sm font-medium text-muted-foreground">Membresía y fechas</p>
                 <FormField
                   control={form.control}
                   name="membresia_id"
@@ -346,7 +286,7 @@ export function ClienteForm({ isOpen, onOpenChange, onSubmit, clienteActual, mem
                     <FormItem>
                       <FormLabel className="text-sm">Fecha de vencimiento</FormLabel>
                       <FormControl>
-                        <Input type="date" className="text-sm" {...field} />
+                        <Input type="date" className="text-sm" {...field} readOnly disabled />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -354,15 +294,27 @@ export function ClienteForm({ isOpen, onOpenChange, onSubmit, clienteActual, mem
                 />
               </div>
             </div>
-            <DialogFooter className="flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <Badge variant={agentStatus === 'online' ? 'default' : agentStatus === 'offline' ? 'destructive' : 'secondary'}>
-                  {agentStatus === 'online' ? 'Agente conectado' : agentStatus === 'offline' ? 'Agente desconectado' : agentStatus === 'checking' ? 'Verificando agente...' : 'Agente'}
-                </Badge>
-                {enrollDate && (
-                  <Badge variant="outline">Huella enrolada: {enrollDate}</Badge>
-                )}
+            {/* Sección de QR para asistencia */}
+            <div className="rounded-lg border p-4">
+              <div className="flex items-center justify-between">
+                <p className="font-medium text-sm">Código QR de asistencia</p>
               </div>
+              {clienteActual ? (
+                <div className="mt-3 flex items-center gap-4">
+                  <div className="bg-white p-3 rounded-md">
+                    <QRCode value={`CLIENT:${clienteActual.id}`} size={128} />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Escanea este QR en la pantalla de Asistencia para registrar la entrada.
+                  </p>
+                </div>
+              ) : (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Guarda el cliente para generar su QR.
+                </p>
+              )}
+            </div>
+            <DialogFooter className="flex-col gap-4">
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-0 sm:items-center sm:justify-end">
                 <DialogClose asChild>
                   <Button type="button" variant="outline" className="w-full sm:w-auto text-sm">
@@ -372,18 +324,7 @@ export function ClienteForm({ isOpen, onOpenChange, onSubmit, clienteActual, mem
                 <Button type="submit" className="w-full sm:w-auto text-sm" disabled={form.formState.isSubmitting}>
                   {clienteActual ? "Actualizar" : "Guardar"}
                 </Button>
-                <Button type="button" className="w-full sm:w-auto text-sm" onClick={handleGuardarYEnrolar} disabled={isEnrolling || form.formState.isSubmitting}>
-                  {isEnrolling ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enrolando...</>) : 'Guardar y Enrolar'}
-                </Button>
-                <Button type="button" variant="secondary" className="w-full sm:w-auto text-sm" onClick={handleActualizarHuella} disabled={!clienteActual?.id || isEnrolling}>
-                  {isEnrolling ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enrolando...</>) : 'Actualizar huella'}
-                </Button>
               </div>
-              {enrollState !== 'idle' && (
-                <div className={`text-sm ${enrollState === 'error' ? 'text-red-600' : enrollState === 'success' ? 'text-green-600' : 'text-muted-foreground'}`}>
-                  {enrollMessage}
-                </div>
-              )}
             </DialogFooter>
           </form>
         </Form>
