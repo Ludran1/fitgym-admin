@@ -198,6 +198,66 @@ INSERT INTO public.eventos (titulo, descripcion, fecha, hora, tipo, cliente_nomb
 ALTER TABLE public.eventos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.asistencias ENABLE ROW LEVEL SECURITY;
 
+-- Tabla de perfiles de usuario (vinculada a auth.users)
+CREATE TABLE IF NOT EXISTS public.profiles (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    email TEXT,
+    full_name TEXT,
+    avatar_url TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Trigger para updated_at en profiles
+CREATE TRIGGER update_profiles_updated_at 
+    BEFORE UPDATE ON public.profiles 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Habilitar RLS en profiles
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+-- Políticas básicas de acceso (ajustar según negocio)
+-- Membresías: lectura para usuarios autenticados
+CREATE POLICY "Authenticated read memberships" ON public.membresias
+    FOR SELECT TO authenticated
+    USING (true);
+
+-- Clientes: CRUD para usuarios autenticados (para desarrollo)
+CREATE POLICY "Authenticated read clients" ON public.clientes
+    FOR SELECT TO authenticated
+    USING (true);
+CREATE POLICY "Authenticated insert clients" ON public.clientes
+    FOR INSERT TO authenticated
+    WITH CHECK (true);
+CREATE POLICY "Authenticated update clients" ON public.clientes
+    FOR UPDATE TO authenticated
+    USING (true) WITH CHECK (true);
+CREATE POLICY "Authenticated delete clients" ON public.clientes
+    FOR DELETE TO authenticated
+    USING (true);
+
+-- Eventos: lectura e inserción/actualización para autenticados
+CREATE POLICY "Authenticated read events" ON public.eventos
+    FOR SELECT TO authenticated
+    USING (true);
+CREATE POLICY "Authenticated write events" ON public.eventos
+    FOR INSERT TO authenticated
+    WITH CHECK (true);
+CREATE POLICY "Authenticated update events" ON public.eventos
+    FOR UPDATE TO authenticated
+    USING (true) WITH CHECK (true);
+
+-- Asistencias: lectura y escritura para autenticados
+CREATE POLICY "Authenticated read attendance" ON public.asistencias
+    FOR SELECT TO authenticated
+    USING (true);
+CREATE POLICY "Authenticated write attendance" ON public.asistencias
+    FOR INSERT TO authenticated
+    WITH CHECK (true);
+CREATE POLICY "Authenticated update attendance" ON public.asistencias
+    FOR UPDATE TO authenticated
+    USING (true) WITH CHECK (true);
+
 -- Función para actualizar automáticamente el estado de membresías vencidas
 CREATE OR REPLACE FUNCTION update_membership_status()
 RETURNS TRIGGER AS $$

@@ -1,5 +1,5 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "fitgym",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -8,7 +8,7 @@
     "build": "next build",
     "build:dev": "next build",
     "lint": "eslint .",
-    "preview": "npx serve dist -p 8080",
+    
     "vercel-build": "npm run build"
   },
   "dependencies": {

@@ -1,6 +1,6 @@
 # 🏋️‍♂️ FitGym - Sistema de Gestión de Gimnasio
 
-Sistema completo de gestión para gimnasios desarrollado con **React + TypeScript + Supabase**.
+Sistema completo de gestión para gimnasios desarrollado con **Next.js (App Router) + TypeScript + Supabase**.
 
 ## 🚀 Demo en Vivo
 
@@ -18,7 +18,7 @@ Sistema completo de gestión para gimnasios desarrollado con **React + TypeScrip
 
 ## 🛠️ Tecnologías
 
-- **Frontend**: React 18, TypeScript, Vite
+- **Frontend**: Next.js 14 (App Router), React 18, TypeScript
 - **UI**: Tailwind CSS, shadcn/ui, Lucide Icons
 - **Backend**: Supabase (PostgreSQL, Auth, Real-time)
 - **Despliegue**: Vercel
@@ -50,15 +50,15 @@ Sistema completo de gestión para gimnasios desarrollado con **React + TypeScrip
    cp .env.example .env
    ```
    
-   Edita `.env` con tus credenciales de Supabase:
+   Edita `.env.local` con tus credenciales de Supabase:
    ```env
-   VITE_SUPABASE_URL=tu_url_de_supabase
-   VITE_SUPABASE_ANON_KEY=tu_clave_anonima
+   NEXT_PUBLIC_SUPABASE_URL=tu_url_de_supabase
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_clave_anonima
    ```
 
 4. **Configurar base de datos**:
    - Ve a tu proyecto en Supabase
-   - Ejecuta el script `supabase-schema.sql` en el SQL Editor
+   - Ejecuta los scripts `supabase-schema.sql` y `supabase-functions.sql` en el SQL Editor
 
 5. **Ejecutar en desarrollo**:
    ```bash
@@ -91,18 +91,21 @@ Para más detalles, consulta [DESPLIEGUE_VERCEL.md](./DESPLIEGUE_VERCEL.md)
 
 ```
 src/
+├── app/                 # Rutas Next (App Router)
+│   ├── (protected)/     # Rutas protegidas con GymLayout
+│   ├── login/           # Login (Google OAuth)
+│   ├── registro/        # Registro
+│   ├── layout.tsx       # Root layout y Providers
+│   └── globals.css      # Estilos base (Tailwind + shadcn)
 ├── components/          # Componentes reutilizables
-│   ├── ui/             # Componentes de UI (shadcn/ui)
-│   └── GymLayout.tsx   # Layout principal
-├── features/           # Funcionalidades por módulo
-│   ├── clientes/       # Gestión de clientes
-│   └── whatsapp/       # Integración WhatsApp
-├── hooks/              # Custom hooks
-├── lib/                # Utilidades y configuración
-│   ├── supabase.ts     # Cliente de Supabase
-│   └── utils.ts        # Funciones utilitarias
-├── pages/              # Páginas de la aplicación
-└── main.tsx           # Punto de entrada
+│   ├── ui/              # Componentes de UI (shadcn/ui)
+│   └── GymLayout.tsx    # Layout principal
+├── features/            # Funcionalidades por módulo
+├── hooks/               # Custom hooks
+├── lib/                 # Utilidades y configuración
+│   ├── supabase.ts      # Cliente de Supabase
+│   └── utils.ts         # Funciones utilitarias
+└── public/              # Assets estáticos
 ```
 
 ## 🗄️ Base de Datos
@@ -120,9 +123,8 @@ El schema completo está disponible en `supabase-schema.sql`
 ## 🔧 Scripts Disponibles
 
 ```bash
-npm run dev          # Servidor de desarrollo
-npm run build        # Build de producción
-npm run preview      # Preview del build
+npm run dev          # Servidor de desarrollo (Next)
+npm run build        # Build de producción (Next)
 npm run lint         # Linter ESLint
 ```
 
