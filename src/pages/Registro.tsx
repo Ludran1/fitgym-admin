@@ -1,6 +1,7 @@
 
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import Link from "next/link";
+import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +24,7 @@ const formSchema = z.object({
 
 export default function Registro() {
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
+  const router = useRouter();
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -49,7 +50,7 @@ export default function Registro() {
           title: "Registro exitoso",
           description: "Ya puedes iniciar sesión",
         });
-        navigate("/login");
+        router.push("/login");
       }, 1000);
     } catch (error) {
       setIsLoading(false);
@@ -138,7 +139,7 @@ export default function Registro() {
         <CardFooter className="flex flex-col space-y-2">
           <div className="text-sm text-center text-muted-foreground">
             ¿Ya tienes una cuenta?{" "}
-            <Link to="/login" className="underline">
+            <Link href="/login" className="underline">
               Inicia sesión
             </Link>
           </div>

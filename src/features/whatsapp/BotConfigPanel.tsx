@@ -74,7 +74,8 @@ export function BotConfigPanel({ onClose }: BotConfigPanelProps) {
   } = useBotWhatsApp();
 
   const [editandoRespuesta, setEditandoRespuesta] = useState<RespuestaAutomatica | null>(null);
-  const [nuevaRespuesta, setNuevaRespuesta] = useState<Partial<RespuestaAutomatica>>({
+  // Mantener el estado con el tipo esperado por agregarRespuestaAutomatica (sin id)
+  const [nuevaRespuesta, setNuevaRespuesta] = useState<Omit<RespuestaAutomatica, 'id'>>({
     keywords: [],
     respuesta: '',
     activa: true,
@@ -91,15 +92,15 @@ export function BotConfigPanel({ onClose }: BotConfigPanelProps) {
   const handleAgregarRespuesta = () => {
     if (nuevaRespuesta.keywords && nuevaRespuesta.respuesta) {
       agregarRespuestaAutomatica({
-        keywords: typeof nuevaRespuesta.keywords === 'string' 
-          ? nuevaRespuesta.keywords.split(',').map(k => k.trim())
-          : nuevaRespuesta.keywords,
+        keywords: Array.isArray(nuevaRespuesta.keywords)
+          ? nuevaRespuesta.keywords
+          : [],
         respuesta: nuevaRespuesta.respuesta,
-        activa: nuevaRespuesta.activa || true,
-        categoria: nuevaRespuesta.categoria || 'general',
-        prioridad: nuevaRespuesta.prioridad || 1
+        activa: nuevaRespuesta.activa ?? true,
+        categoria: nuevaRespuesta.categoria ?? 'general',
+        prioridad: nuevaRespuesta.prioridad ?? 1
       });
-      
+
       setNuevaRespuesta({
         keywords: [],
         respuesta: '',

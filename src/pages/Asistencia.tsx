@@ -57,7 +57,7 @@ export default function Asistencia() {
   const loadClientes = async () => {
     const { data, error } = await supabase
       .from("clientes")
-      .select("id, nombre, dni, estado, avatar_url, membresia_id, nombre_membresia, tipo_membresia, fecha_fin")
+      .select("*")
       .order("created_at", { ascending: false });
     if (error) {
       toast({
@@ -68,7 +68,7 @@ export default function Asistencia() {
       return;
     }
 
-    const clientesBase = data || [];
+    const clientesBase = (data || []) as Database["public"]["Tables"]["clientes"]["Row"][];
 
     // Si no hay nombre_membresia/tipo_membresia, intentar enriquecer usando la relación membresia_id
     const membresiaIds = Array.from(
@@ -87,13 +87,13 @@ export default function Asistencia() {
 
       if (!membresiasError && membresiasData) {
         const mapaMembresias = new Map(membresiasData.map((m) => [m.id, m]));
-        const enriquecidos = clientesBase.map((c) => {
+        const enriquecidos: Database["public"]["Tables"]["clientes"]["Row"][] = clientesBase.map((c) => {
           const m = c.membresia_id ? mapaMembresias.get(c.membresia_id) : undefined;
           return {
             ...c,
             nombre_membresia: c.nombre_membresia ?? (m ? m.nombre : null),
-            tipo_membresia: c.tipo_membresia ?? (m ? (m.tipo as Database["public"]["Tables"]["membresias"]["Row"]["tipo"]) : null),
-          };
+            tipo_membresia: c.tipo_membresia ?? (m ? m.tipo : null),
+          } as Database["public"]["Tables"]["clientes"]["Row"];
         });
         setClientes(enriquecidos);
         return;
@@ -106,7 +106,7 @@ export default function Asistencia() {
   const loadAsistencias = async () => {
     const { data, error } = await supabase
       .from("asistencias")
-      .select("id, cliente_id, fecha_asistencia, notas, created_at")
+      .select("*")
       .order("fecha_asistencia", { ascending: false })
       .limit(100);
     if (error) {
@@ -117,7 +117,7 @@ export default function Asistencia() {
       });
       return;
     }
-    setAsistencias(data || []);
+    setAsistencias((data || []) as Database["public"]["Tables"]["asistencias"]["Row"][]);
   };
 
   const registrarAsistencia = async (cliente: Database["public"]["Tables"]["clientes"]["Row"], tipo: "huella" | "dni") => {
@@ -168,7 +168,7 @@ export default function Asistencia() {
         estado: "presente",
         notas: tipo,
       })
-      .select("id, cliente_id, fecha_asistencia, notas, created_at")
+      .select("*")
       .single();
 
     if (errorInsert) {
@@ -180,7 +180,7 @@ export default function Asistencia() {
       return;
     }
 
-    setAsistencias((prev) => (inserted ? [inserted, ...prev] : prev));
+    setAsistencias((prev) => (inserted ? [inserted as Database["public"]["Tables"]["asistencias"]["Row"], ...prev] : prev));
 
     const hora = new Date(inserted?.fecha_asistencia || Date.now())
       .toTimeString()
@@ -205,7 +205,7 @@ export default function Asistencia() {
 
     const { data: cliente, error } = await supabase
       .from("clientes")
-      .select("id, nombre, dni, estado, avatar_url")
+      .select("*")
       .eq("dni", dniInput)
       .maybeSingle();
 
@@ -227,7 +227,7 @@ export default function Asistencia() {
       return;
     }
 
-    await registrarAsistencia(cliente, "dni");
+    await registrarAsistencia(cliente as Database["public"]["Tables"]["clientes"]["Row"], "dni");
   };
 
   const simularHuella = async () => {

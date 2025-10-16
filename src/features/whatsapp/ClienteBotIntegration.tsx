@@ -17,38 +17,40 @@ import {
 } from 'lucide-react';
 import { useClientes } from '@/features/clientes/useClientes';
 import { useBotWhatsApp } from './useBotWhatsApp';
-import { Cliente } from '@/features/clientes/types';
+import type { Database } from '@/lib/supabase';
+
+type ClienteRow = Database['public']['Tables']['clientes']['Row'];
 
 interface ClienteBotIntegrationProps {
-  onClienteSeleccionado?: (cliente: Cliente) => void;
+  onClienteSeleccionado?: (cliente: ClienteRow) => void;
 }
 
 export function ClienteBotIntegration({ onClienteSeleccionado }: ClienteBotIntegrationProps) {
   const { clientes } = useClientes();
   const { actualizarClientes, estadisticas, obtenerConversacionesEscaladas } = useBotWhatsApp();
-  const [clientesConWhatsApp, setClientesConWhatsApp] = useState<Cliente[]>([]);
+  const [clientesConWhatsApp, setClientesConWhatsApp] = useState<ClienteRow[]>([]);
   const [conversacionesEscaladas, setConversacionesEscaladas] = useState<any[]>([]);
 
   // Sincronizar clientes con el bot
   useEffect(() => {
-    // Convertir clientes del sistema al formato del bot
-    const clientesBot = clientes.map(cliente => ({
+    // Convertir clientes del sistema (Supabase) al formato del bot
+    const clientesBot = clientes.map((cliente) => ({
       id: cliente.id,
       nombre: cliente.nombre,
       telefono: cliente.telefono,
       email: cliente.email,
-      tipoMembresia: cliente.membresia,
-      fechaInicio: cliente.fechaInicio,
-      fechaFin: cliente.fechaFin,
-      asistencias: cliente.asistencias,
-      activo: cliente.membresia === 'activa'
+      // Mapear estado de Supabase a membresía del bot
+      membresia: (cliente.estado === 'suspendida' ? 'pendiente' : (cliente.estado as 'activa' | 'vencida' | 'pendiente')),
+      tipoMembresia: (cliente.estado === 'suspendida' ? 'pendiente' : (cliente.estado as 'activa' | 'vencida' | 'pendiente')),
+      fechaRegistro: cliente.fecha_registro,
+      ultimaVisita: cliente.fecha_fin ?? undefined,
     }));
 
     actualizarClientes(clientesBot);
-    
+
     // Filtrar clientes que tienen WhatsApp (simulado)
-    const clientesWhatsApp = clientes.filter(cliente => 
-      cliente.telefono && cliente.telefono.length >= 9
+    const clientesWhatsApp = clientes.filter(
+      (cliente) => cliente.telefono && cliente.telefono.length >= 9
     );
     setClientesConWhatsApp(clientesWhatsApp);
   }, [clientes, actualizarClientes]);
@@ -59,23 +61,28 @@ export function ClienteBotIntegration({ onClienteSeleccionado }: ClienteBotInteg
     setConversacionesEscaladas(escaladas);
   }, [obtenerConversacionesEscaladas]);
 
-  const obtenerEstadoMembresia = (cliente: Cliente) => {
-    const fechaFin = new Date(cliente.fechaFin);
+  const obtenerEstadoMembresia = (cliente: ClienteRow) => {
+    const fechaFin = new Date(cliente.fecha_fin || new Date());
     const hoy = new Date();
-    const diasRestantes = Math.ceil((fechaFin.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+    const diasRestantes = Math.ceil(
+      (fechaFin.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24)
+    );
 
-    if (cliente.membresia === 'vencida') {
+    if (cliente.estado === 'vencida') {
       return { estado: 'vencida', color: 'destructive', texto: 'Vencida' };
     } else if (diasRestantes <= 7 && diasRestantes > 0) {
       return { estado: 'por-vencer', color: 'outline', texto: `${diasRestantes} días` };
-    } else if (cliente.membresia === 'activa') {
+    } else if (cliente.estado === 'activa') {
       return { estado: 'activa', color: 'default', texto: 'Activa' };
     } else {
       return { estado: 'pendiente', color: 'secondary', texto: 'Pendiente' };
     }
   };
 
-  const generarMensajePersonalizado = (cliente: Cliente, tipo: 'bienvenida' | 'recordatorio' | 'vencimiento') => {
+  const generarMensajePersonalizado = (
+    cliente: ClienteRow,
+    tipo: 'bienvenida' | 'recordatorio' | 'vencimiento'
+  ) => {
     const estadoMembresia = obtenerEstadoMembresia(cliente);
     
     switch (tipo) {
@@ -179,7 +186,7 @@ export function ClienteBotIntegration({ onClienteSeleccionado }: ClienteBotInteg
                 >
                   <div className="flex items-center space-x-3">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={cliente.avatarUrl} />
+                      <AvatarImage src={cliente.avatar_url || undefined} />
                       <AvatarFallback>
                         {cliente.nombre.split(' ').map(n => n[0]).join('').toUpperCase()}
                       </AvatarFallback>

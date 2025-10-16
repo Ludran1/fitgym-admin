@@ -19,7 +19,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Search, Edit, Trash2, Calendar, AlertTriangle } from "lucide-react";
-import { Cliente } from "./types";
+import type { Database } from "@/lib/supabase";
+type Cliente = Database['public']['Tables']['clientes']['Row'];
 import { useMembershipExpiration } from "@/hooks/useMembershipExpiration";
 
 interface ClientesTableProps {
@@ -119,11 +120,11 @@ export function ClientesTable({
                     <TableCell>
                       <div className="flex items-center space-x-2">
                         <Badge 
-                          variant={status === 'active' ? 'default' : status === 'expiring' ? 'destructive' : 'secondary'}
+                          variant={status === 'activa' ? 'default' : status === 'por_vencer' ? 'destructive' : 'secondary'}
                           className={`${getStatusColor(status)} flex items-center space-x-1`}
                         >
-                          {status === 'expiring' && <AlertTriangle className="h-3 w-3" />}
-                          {status === 'active' && <Calendar className="h-3 w-3" />}
+                          {status === 'por_vencer' && <AlertTriangle className="h-3 w-3" />}
+                          {status === 'activa' && <Calendar className="h-3 w-3" />}
                           <span>{getStatusText(status)}</span>
                         </Badge>
                         {cliente.fecha_fin && (
@@ -224,11 +225,11 @@ export function ClientesTable({
                         {cliente.membresia_id ? 'Con membresía' : 'Sin membresía'}
                       </Badge>
                       <Badge 
-                        variant={status === 'active' ? 'default' : status === 'expiring' ? 'destructive' : 'secondary'}
+                        variant={status === 'activa' ? 'default' : status === 'por_vencer' ? 'destructive' : 'secondary'}
                         className={`${getStatusColor(status)} flex items-center space-x-1 text-xs`}
                       >
-                        {status === 'expiring' && <AlertTriangle className="h-3 w-3" />}
-                        {status === 'active' && <Calendar className="h-3 w-3" />}
+                        {status === 'por_vencer' && <AlertTriangle className="h-3 w-3" />}
+                        {status === 'activa' && <Calendar className="h-3 w-3" />}
                         <span>{getStatusText(status)}</span>
                       </Badge>
                     </div>

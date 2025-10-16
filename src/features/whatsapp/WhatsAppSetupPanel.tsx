@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -110,11 +111,16 @@ export const WhatsAppSetupPanel: React.FC<WhatsAppSetupPanelProps> = ({
 
   // Copiar al portapapeles
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+    }
   };
 
   // Generar URL del webhook
   const getWebhookUrl = () => {
+    if (typeof window === 'undefined') {
+      return '';
+    }
     const baseUrl = window.location.origin;
     return `${baseUrl}/api/whatsapp/webhook`;
   };

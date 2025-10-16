@@ -16,7 +16,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Cliente } from "./types";
+import type { Database } from "@/lib/supabase";
+type Cliente = Database['public']['Tables']['clientes']['Row'];
 import { useMembresias } from "@/hooks/useMembresias";
 import { format, addMonths } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -69,7 +70,8 @@ export function ClienteForm({ isOpen, onOpenChange, onSubmit, clienteActual, mem
   const calcularFechaVencimiento = (membresiaId: string) => {
     const membresiaSeleccionada = membresiasDisponibles.find(m => m.id === membresiaId);
     if (membresiaSeleccionada && membresiaSeleccionada.duracion) {
-      const fechaInicio = new Date(form.getValues("fecha_inicio"));
+      const fechaInicioStr = form.getValues("fecha_inicio") || format(new Date(), "yyyy-MM-dd");
+      const fechaInicio = new Date(fechaInicioStr);
       const fechaVencimiento = addMonths(fechaInicio, membresiaSeleccionada.duracion);
       return format(fechaVencimiento, "yyyy-MM-dd");
     }

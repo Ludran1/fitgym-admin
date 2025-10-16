@@ -19,26 +19,27 @@ export interface RespuestaAutomatica {
   prioridad: number;
 }
 
-export interface ConversacionBot {
-  id: string;
-  clienteId: string;
-  estado: 'bot' | 'humano' | 'cerrada';
-  iniciadaPor: 'cliente' | 'bot';
-  fechaInicio: string;
-  fechaUltimaActividad: string;
-  mensajesBot: number;
-  escaladaHumano: boolean;
-  razonEscalacion?: string;
-}
-
 export interface MensajeBot {
   id: string;
-  conversacionId: string;
-  texto: string;
-  tipo: 'automatico' | 'manual';
-  respuestaId?: string; // ID de la respuesta automática usada
-  confianza: number; // 0-100, qué tan seguro está el bot de la respuesta
-  fecha: string;
+  contenido: string;
+  timestamp: Date;
+  esBot: boolean;
+  numeroTelefono: string;
+}
+
+export interface ConversacionBot {
+  id: string;
+  numeroTelefono: string;
+  mensajes: MensajeBot[];
+  activa: boolean;
+  requiereHumano: boolean;
+  fechaInicio: Date;
+  ultimaActividad: Date;
+  atendidaPorHumano?: boolean;
+  // Campos adicionales opcionales para compatibilidad con otros usos
+  estado?: 'bot' | 'humano' | 'cerrada';
+  escaladaHumano?: boolean;
+  razonEscalacion?: string;
 }
 
 export interface EstadisticasBot {
@@ -56,6 +57,7 @@ export interface Cliente {
   telefono: string;
   email?: string;
   membresia: 'activa' | 'vencida' | 'pendiente';
+  tipoMembresia?: 'activa' | 'vencida' | 'pendiente';
   fechaRegistro: string;
   ultimaVisita?: string;
   preferencias?: {

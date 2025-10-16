@@ -6,6 +6,7 @@ import {
   ConversacionBot, 
   MensajeBot, 
   EstadisticasBot,
+  Cliente,
   respuestasIniciales,
   botConfigInicial 
 } from './types';
@@ -23,6 +24,7 @@ export const useBotWhatsApp = () => {
     palabrasClaveNoReconocidas: []
   });
   const { toast } = useToast();
+  const [clientes, setClientes] = useState<Cliente[]>([]);
 
   // Función para procesar mensaje entrante y generar respuesta automática
   const procesarMensaje = useCallback((mensaje: string, clienteId: string): string | null => {
@@ -156,6 +158,16 @@ export const useBotWhatsApp = () => {
     });
   }, [toast]);
 
+  // Actualiza la lista de clientes conocida por el bot (simple almacenamiento)
+  const actualizarClientes = useCallback((nuevosClientes: Cliente[]) => {
+    setClientes(nuevosClientes);
+  }, []);
+
+  // Obtiene conversaciones escaladas (requieren humano) desde el estado local
+  const obtenerConversacionesEscaladas = useCallback(() => {
+    return conversacionesBot.filter(conv => conv.requiereHumano || conv.escaladaHumano);
+  }, [conversacionesBot]);
+
   // Función para obtener sugerencias de mejora basadas en palabras no reconocidas
   const obtenerSugerenciasMejora = useCallback(() => {
     const palabrasFrequentes = estadisticas.palabrasClaveNoReconocidas
@@ -189,16 +201,19 @@ export const useBotWhatsApp = () => {
     respuestasAutomaticas,
     conversacionesBot,
     estadisticas,
+    clientes,
     
     // Funciones
     procesarMensaje,
     generarRespuestaConDelay,
     toggleBot,
     actualizarConfigBot,
+    actualizarClientes,
     agregarRespuestaAutomatica,
     editarRespuestaAutomatica,
     eliminarRespuestaAutomatica,
     escalarAHumano,
+    obtenerConversacionesEscaladas,
     obtenerSugerenciasMejora
   };
 };
