@@ -24,11 +24,11 @@ import { supabase } from "@/lib/supabase";
 export function GymLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { logout, user } = useAuth();
-  
+
   // Estado para eventos próximos
   const [eventosProximos, setEventosProximos] = useState<any[]>([]);
   const [notificacionesAbiertas, setNotificacionesAbiertas] = useState(false);
-  
+
   // Función para obtener eventos de las próximas 24 horas desde Supabase
   const obtenerEventosProximos = async () => {
     try {
@@ -75,20 +75,20 @@ export function GymLayout({ children }: { children: React.ReactNode }) {
       setEventosProximos([]);
     }
   };
-  
+
   useEffect(() => {
     obtenerEventosProximos();
     // Actualizar cada 5 minutos
     const interval = setInterval(obtenerEventosProximos, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
-  
+
   const obtenerTiempoRelativo = (fecha: Date) => {
     const ahora = new Date();
     const diferencia = fecha.getTime() - ahora.getTime();
     const horas = Math.floor(diferencia / (1000 * 60 * 60));
     const minutos = Math.floor((diferencia % (1000 * 60 * 60)) / (1000 * 60));
-    
+
     if (horas === 0) {
       return `En ${minutos} min`;
     } else if (horas < 24) {
@@ -96,7 +96,7 @@ export function GymLayout({ children }: { children: React.ReactNode }) {
     }
     return format(fecha, 'HH:mm', { locale: es });
   };
-  
+
   const obtenerColorTipo = (tipo: string) => {
     switch (tipo) {
       case 'entrenamiento': return 'bg-blue-100 text-blue-800';
@@ -105,12 +105,12 @@ export function GymLayout({ children }: { children: React.ReactNode }) {
       default: return 'bg-gray-100 text-gray-800';
     }
   };
-  
+
   const handleLogout = () => {
     logout();
     router.push('/login');
   };
-  
+
   return (
     <SidebarProvider style={{
       // Sidebar más ancho en desktop
@@ -123,7 +123,6 @@ export function GymLayout({ children }: { children: React.ReactNode }) {
           <header className="h-16 border-b flex items-center px-4 md:px-6 gap-4 justify-between bg-accent/40 backdrop-blur">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="md:hidden" />
-              <h1 className="text-xl md:text-2xl font-bold">FitGym</h1>
             </div>
             <div className="flex items-center gap-2 md:gap-4">
               <DropdownMenu open={notificacionesAbiertas} onOpenChange={setNotificacionesAbiertas}>
@@ -131,7 +130,7 @@ export function GymLayout({ children }: { children: React.ReactNode }) {
                   <Button variant="ghost" size="icon" className="relative">
                     <Bell className="h-4 w-4 md:h-5 md:w-5" />
                     {eventosProximos.length > 0 && (
-                      <Badge 
+                      <Badge
                         className="absolute -top-1 -right-1 h-4 w-4 md:h-5 md:w-5 rounded-full p-0 flex items-center justify-center text-xs bg-red-500 text-white"
                       >
                         {eventosProximos.length}
@@ -149,7 +148,7 @@ export function GymLayout({ children }: { children: React.ReactNode }) {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  
+
                   {eventosProximos.length === 0 ? (
                     <div className="p-4 text-center text-sm text-muted-foreground">
                       No hay eventos próximos
@@ -157,8 +156,8 @@ export function GymLayout({ children }: { children: React.ReactNode }) {
                   ) : (
                     <div className="max-h-60 md:max-h-80 overflow-y-auto">
                       {eventosProximos.map((evento) => (
-                        <DropdownMenuItem 
-                          key={evento.id} 
+                        <DropdownMenuItem
+                          key={evento.id}
                           className="flex flex-col items-start p-3 cursor-pointer"
                           onClick={() => router.push('/calendario')}
                         >
@@ -189,9 +188,9 @@ export function GymLayout({ children }: { children: React.ReactNode }) {
                       ))}
                     </div>
                   )}
-                  
+
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     className="text-center justify-center text-blue-600 hover:text-blue-700"
                     onClick={() => router.push('/calendario')}
                   >
@@ -227,7 +226,7 @@ export function GymLayout({ children }: { children: React.ReactNode }) {
                     <span>Configuración</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     className="text-red-500 hover:text-red-700"
                     onClick={handleLogout}
                   >

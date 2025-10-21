@@ -1,9 +1,8 @@
 import "./globals.css";
 import { Providers } from "@/app/providers";
-export const metadata = {
-  title: "FitGym",
-  description: "Administración de gimnasio",
-};
+import { metadata as SiteMetadata } from "@/app/metadata";
+
+export const metadata = SiteMetadata;
 
 export default function RootLayout({
   children,

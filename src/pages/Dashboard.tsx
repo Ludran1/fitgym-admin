@@ -1,11 +1,11 @@
 
-import { 
-  Activity, 
-  Users, 
-  Calendar, 
-  Dumbbell, 
-  MessageSquare, 
-  TrendingUp 
+import {
+  Activity,
+  Users,
+  Calendar,
+  Dumbbell,
+  MessageSquare,
+  TrendingUp
 } from "lucide-react";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { ActivityChart } from "@/components/dashboard/ActivityChart";
@@ -81,44 +81,44 @@ export default function Dashboard() {
           Resumen de actividad del gimnasio
         </p>
       </div>
-      
+
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard 
-          title="Clientes Totales" 
-          value={String(stats.totalClientes)} 
-          icon={Users} 
+        <StatCard
+          title="Clientes Totales"
+          value={String(stats.totalClientes)}
+          icon={Users}
           description="+12% desde el mes pasado"
           iconColor="text-gym-blue"
         />
-        <StatCard 
-          title="Asistencias Hoy" 
-          value={String(stats.asistenciasHoy)} 
-          icon={Activity} 
+        <StatCard
+          title="Asistencias Hoy"
+          value={String(stats.asistenciasHoy)}
+          icon={Activity}
           description="Actualizado en tiempo real"
           iconColor="text-gym-green"
         />
-        <StatCard 
-          title="Clases Hoy" 
-          value={String(stats.clasesHoy)} 
-          icon={Calendar} 
+        <StatCard
+          title="Clases Hoy"
+          value={String(stats.clasesHoy)}
+          icon={Calendar}
           description="Clases programadas para hoy"
           iconColor="text-gym-purple"
         />
-        <StatCard 
-          title="Ingresos" 
-          value={`$${stats.ingresosHoy.toLocaleString("en-US")}`} 
-          icon={TrendingUp} 
+        <StatCard
+          title="Ingresos"
+          value={`$${stats.ingresosHoy.toLocaleString("en-US")}`}
+          icon={TrendingUp}
           description="Ingresos estimados del día"
           iconColor="text-green-500"
         />
       </div>
-      
+
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
         <ActivityChart />
         <ExpiringMemberships />
       </div>
-      
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-6">
+
+      {/* <div className="grid gap-4 grid-cols-1 lg:grid-cols-6">
         <UpcomingClasses />
         <RecentClients />
         <Card className="col-span-3 lg:col-span-3">
@@ -148,7 +148,7 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </div> */}
     </div>
   );
 }

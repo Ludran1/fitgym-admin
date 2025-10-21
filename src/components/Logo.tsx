@@ -10,27 +10,24 @@ export type LogoProps = {
 };
 
 export function Logo({
-  size = 28,
-  withText = true,
+  size = 72,
   className = "",
-  textClassName = "",
   alt = "FitGym logo",
 }: LogoProps) {
   return (
     <div
       className={`inline-flex items-center gap-2 rounded-lg px-2 py-1 ${className}`}
-      aria-label="FitGym"
+      aria-label="Fitgym"
     >
       <Image
         src="/fitgym-logo.png"
+        loading="eager"
+        className="rounded-lg"
         width={size}
         height={size}
         alt={alt}
         priority={false}
       />
-      {withText && (
-        <span className={`font-bold tracking-tight ${textClassName}`}>FitGym</span>
-      )}
     </div>
   );
 }
