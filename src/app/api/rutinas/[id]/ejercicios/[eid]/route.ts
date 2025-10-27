@@ -17,30 +17,25 @@ export async function PUT(
       orden,
     } = body
 
-    const updateQuery = `UPDATE public.rutina_ejercicios
-      SET nombre = COALESCE($1, nombre),
-          series = COALESCE($2, series),
-          repeticiones = COALESCE($3, repeticiones),
-          dia = COALESCE($4, dia),
-          notas = COALESCE($5, notas),
-          orden = COALESCE($6, orden)
-      WHERE id = $7 AND rutina_id = $8
-      RETURNING id, rutina_id, nombre, series, repeticiones, dia, notas, orden`
+    const existing = await prisma.routineExercises.findFirst({
+      where: { id: params.eid, routine_id: params.id },
+    })
+    if (!existing)
+      return NextResponse.json({ error: 'Ejercicio no encontrado' }, { status: 404 })
 
-    const rows = await prisma.$queryRawUnsafe<any[]>(
-      updateQuery,
-      nombre ?? null,
-      series ?? null,
-      repeticiones ?? null,
-      dia ?? null,
-      notas ?? null,
-      orden ?? null,
-      params.eid,
-      params.id,
-    )
+    const data: any = {}
+    if (nombre !== undefined) data.name = nombre
+    if (series !== undefined) data.sets = series
+    if (repeticiones !== undefined) data.reps = repeticiones
+    if (dia !== undefined) data.day = dia
+    if (notas !== undefined) data.notes = notas
+    if (orden !== undefined) data.order = orden
 
-    const updated = rows[0]
-    if (!updated) return NextResponse.json({ error: 'Ejercicio no encontrado' }, { status: 404 })
+    const updated = await prisma.routineExercises.update({
+      where: { id: params.eid },
+      data,
+    })
+
     return NextResponse.json(updated)
   } catch (err) {
     console.error('PUT /api/rutinas/[id]/ejercicios/[eid] error', err)

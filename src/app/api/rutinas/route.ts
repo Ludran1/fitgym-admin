@@ -1,33 +1,92 @@
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 
-// Listar rutinas, opcionalmente filtrando por cliente_id y estado
+async function ensureRoutineTables() {
+  await prisma.$executeRawUnsafe('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS public.routines (
+      id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+      client_id UUID NOT NULL REFERENCES public.clientes(id) ON UPDATE NO ACTION,
+      name VARCHAR(255) NOT NULL,
+      description TEXT,
+      status VARCHAR(20) DEFAULT 'active',
+      start_date TIMESTAMPTZ,
+      end_date TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `)
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS public.routine_exercises (
+      id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+      routine_id UUID NOT NULL REFERENCES public.routines(id) ON DELETE CASCADE ON UPDATE NO ACTION,
+      name VARCHAR(255) NOT NULL,
+      sets INT,
+      reps INT,
+      day VARCHAR(20),
+      notes TEXT,
+      "order" INT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `)
+  await prisma.$executeRawUnsafe(`
+    CREATE OR REPLACE FUNCTION update_updated_at_column()
+    RETURNS TRIGGER AS $$
+    BEGIN
+        NEW.updated_at = NOW();
+        RETURN NEW;
+    END;
+    $$ LANGUAGE 'plpgsql'
+  `)
+  await prisma.$executeRawUnsafe(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'update_routines_updated_at'
+      ) THEN
+        CREATE TRIGGER update_routines_updated_at
+          BEFORE UPDATE ON public.routines
+          FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+      END IF;
+    END
+    $$
+  `)
+}
+
+// Listar rutinas, opcionalmente filtrando por client_id y status
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)
-    const cliente_id = searchParams.get('cliente_id')
-    const estado = searchParams.get('estado')
+    const client_id = searchParams.get('cliente_id') ?? undefined
+    const status = searchParams.get('estado') ?? undefined
 
-    let query = 'SELECT id, cliente_id, nombre, descripcion, estado, fecha_inicio, fecha_fin, created_at, updated_at FROM public.rutinas'
-    const conditions: string[] = []
-    const params: any[] = []
-
-    if (cliente_id) {
-      conditions.push(`cliente_id = $${params.length + 1}`)
-      params.push(cliente_id)
+    try {
+      const rutinas = await prisma.routines.findMany({
+        where: {
+          ...(client_id ? { client_id } : {}),
+          ...(status ? { status } : {}),
+        },
+        orderBy: [{ updated_at: 'desc' }, { created_at: 'desc' }],
+        take: 100,
+        include: { exercises: true },
+      })
+      return NextResponse.json(rutinas)
+    } catch (e: any) {
+      if (e?.code === 'P2021') {
+        await ensureRoutineTables()
+        const rutinas = await prisma.routines.findMany({
+          where: {
+            ...(client_id ? { client_id } : {}),
+            ...(status ? { status } : {}),
+          },
+          orderBy: [{ updated_at: 'desc' }, { created_at: 'desc' }],
+          take: 100,
+          include: { exercises: true },
+        })
+        return NextResponse.json(rutinas)
+      }
+      throw e
     }
-    if (estado) {
-      conditions.push(`estado = $${params.length + 1}`)
-      params.push(estado)
-    }
-
-    if (conditions.length) {
-      query += ' WHERE ' + conditions.join(' AND ')
-    }
-    query += ' ORDER BY updated_at DESC NULLS LAST, created_at DESC'
-
-    const rutinas = await prisma.$queryRawUnsafe<any[]>(query, ...params)
-    return NextResponse.json(rutinas)
   } catch (err) {
     console.error('GET /api/rutinas error', err)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })

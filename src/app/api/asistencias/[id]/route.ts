@@ -6,9 +6,9 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const a = await prisma.asistencias.findUnique({
+    const a = await prisma.attendances.findUnique({
       where: { id: params.id },
-      include: { evento: true, cliente: true },
+      include: { event: true, client: true },
     })
     if (!a) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
     return NextResponse.json(a)
@@ -25,9 +25,18 @@ export async function PUT(
   try {
     const body = await req.json()
     const data: any = {}
-    const fields = ['estado', 'notas']
-    for (const f of fields) if (body[f] !== undefined) data[f] = body[f]
-    const a = await prisma.asistencias.update({ where: { id: params.id }, data })
+    
+    // Map Spanish request fields to English model fields
+    const fieldMapping = {
+      estado: 'status',
+      notas: 'notes'
+    }
+    
+    for (const [spanishField, englishField] of Object.entries(fieldMapping)) {
+      if (body[spanishField] !== undefined) data[englishField] = body[spanishField]
+    }
+    
+    const a = await prisma.attendances.update({ where: { id: params.id }, data })
     return NextResponse.json(a)
   } catch (err: any) {
     console.error('PUT /api/asistencias/[id] error', err)
@@ -41,7 +50,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    await prisma.asistencias.delete({ where: { id: params.id } })
+    await prisma.attendances.delete({ where: { id: params.id } })
     return NextResponse.json({ ok: true })
   } catch (err: any) {
     console.error('DELETE /api/asistencias/[id] error', err)

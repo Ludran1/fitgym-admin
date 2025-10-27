@@ -6,9 +6,9 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const cliente = await prisma.clientes.findUnique({
+    const cliente = await prisma.clients.findUnique({
       where: { id: params.id },
-      include: { membresia: true },
+      include: { membership: true },
     })
     if (!cliente) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
     return NextResponse.json(cliente)
@@ -46,10 +46,10 @@ export async function PUT(
       }
     }
 
-    const updated = await prisma.clientes.update({
+    const updated = await prisma.clients.update({
       where: { id: params.id },
       data,
-      include: { membresia: true },
+      include: { membership: true },
     })
     return NextResponse.json(updated)
   } catch (err: any) {
@@ -69,7 +69,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    await prisma.clientes.delete({ where: { id: params.id } })
+    await prisma.clients.delete({ where: { id: params.id } })
     return NextResponse.json({ ok: true })
   } catch (err: any) {
     console.error('DELETE /api/clientes/[id] error', err)

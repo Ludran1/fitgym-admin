@@ -4,34 +4,34 @@ import { NextResponse } from 'next/server'
 export async function GET() {
   try {
     const [totalClientes, activas, vencidas, totalEventos] = await Promise.all([
-      prisma.clientes.count(),
-      prisma.clientes.count({ where: { estado: 'activa' } }),
-      prisma.clientes.count({ where: { estado: 'vencida' } }),
-      prisma.eventos.count({ where: { estado: 'programado' } }),
+      prisma.clients.count(),
+      prisma.clients.count({ where: { status: 'active' } }),
+      prisma.clients.count({ where: { status: 'expired' } }),
+      prisma.events.count({ where: { status: 'scheduled' } }),
     ])
 
-    const membershipCounts = await prisma.clientes.groupBy({
-      by: ['membresia_id'],
-      _count: { membresia_id: true },
+    const membershipCounts = await prisma.clients.groupBy({
+      by: ['membership_id'],
+      _count: { membership_id: true },
     })
 
     const today = new Date()
     const ahead = new Date()
     ahead.setDate(ahead.getDate() + 7)
-    const expiring = await prisma.clientes.findMany({
+    const expiring = await prisma.clients.findMany({
       where: {
-        estado: 'activa',
-        fecha_fin: { gte: today, lte: ahead },
+        status: 'active',
+        end_date: { gte: today, lte: ahead },
       },
       select: {
         id: true,
-        nombre: true,
+        full_name: true,
         email: true,
-        telefono: true,
-        fecha_fin: true,
-        nombre_membresia: true,
+        phone: true,
+        end_date: true,
+        membership_name: true,
       },
-      orderBy: { fecha_fin: 'asc' },
+      orderBy: { end_date: 'asc' },
       take: 10,
     })
 

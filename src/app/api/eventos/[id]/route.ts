@@ -11,9 +11,9 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const ev = await prisma.eventos.findUnique({
+    const ev = await prisma.events.findUnique({
       where: { id: params.id },
-      include: { cliente: true, asistencias: true },
+      include: { client: true, attendances: true },
     })
     if (!ev) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
     return NextResponse.json(ev)
@@ -30,33 +30,36 @@ export async function PUT(
   try {
     const body = await req.json()
     const data: any = {}
-    const fields = [
-      'titulo',
-      'descripcion',
-      'fecha',
-      'hora',
-      'tipo',
-      'cliente_id',
-      'cliente_nombre',
-      'entrenador',
-      'duracion',
-      'estado',
-      'max_participantes',
-      'precio',
-      'notas',
-    ]
-    for (const f of fields) {
-      if (body[f] !== undefined) {
-        if (f === 'fecha') data[f] = new Date(body[f])
-        else if (f === 'hora') data[f] = parseHora(body[f])
-        else data[f] = body[f]
+    
+    // Map Spanish request fields to English model fields
+    const fieldMapping = {
+      titulo: 'title',
+      descripcion: 'description',
+      fecha: 'date',
+      hora: 'time',
+      tipo: 'type',
+      cliente_id: 'client_id',
+      cliente_nombre: 'client_name',
+      entrenador: 'trainer',
+      duracion: 'duration',
+      estado: 'status',
+      max_participantes: 'max_participants',
+      precio: 'price',
+      notas: 'notes',
+    }
+    
+    for (const [spanishField, englishField] of Object.entries(fieldMapping)) {
+      if (body[spanishField] !== undefined) {
+        if (spanishField === 'fecha') data[englishField] = new Date(body[spanishField])
+        else if (spanishField === 'hora') data[englishField] = parseHora(body[spanishField])
+        else data[englishField] = body[spanishField]
       }
     }
 
-    const ev = await prisma.eventos.update({
+    const ev = await prisma.events.update({
       where: { id: params.id },
       data,
-      include: { cliente: true },
+      include: { client: true },
     })
     return NextResponse.json(ev)
   } catch (err: any) {
@@ -71,7 +74,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    await prisma.eventos.delete({ where: { id: params.id } })
+    await prisma.events.delete({ where: { id: params.id } })
     return NextResponse.json({ ok: true })
   } catch (err: any) {
     console.error('DELETE /api/eventos/[id] error', err)

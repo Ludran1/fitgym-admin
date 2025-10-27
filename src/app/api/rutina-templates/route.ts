@@ -36,16 +36,38 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const q = searchParams.get('q')
 
-    let query = 'SELECT id, nombre, descripcion, created_at, updated_at FROM public.rutina_templates'
-    const params: any[] = []
-    if (q) {
-      query += ' WHERE nombre ILIKE $1'
-      params.push(`%${q}%`)
-    }
-    query += ' ORDER BY updated_at DESC NULLS LAST, created_at DESC'
+    const whereClause = q ? {
+      name: {
+        contains: q,
+        mode: 'insensitive' as const
+      }
+    } : {}
 
-    const templates = await prisma.$queryRawUnsafe<any[]>(query, ...params)
-    return NextResponse.json({ templates })
+    const templates = await prisma.routineTemplates.findMany({
+      where: whereClause,
+      orderBy: [
+        { updated_at: 'desc' },
+        { created_at: 'desc' }
+      ],
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        created_at: true,
+        updated_at: true
+      }
+    })
+
+    // Map English fields to Spanish for API response
+    const templatesResponse = templates.map(template => ({
+      id: template.id,
+      nombre: template.name,
+      descripcion: template.description,
+      created_at: template.created_at,
+      updated_at: template.updated_at
+    }))
+
+    return NextResponse.json({ templates: templatesResponse })
   } catch (err) {
     console.error('GET /api/rutina-templates error', err)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
@@ -59,15 +81,30 @@ export async function POST(req: Request) {
     const { nombre, descripcion } = body
     if (!nombre) return NextResponse.json({ error: 'nombre es requerido' }, { status: 400 })
 
-    const rows = await prisma.$queryRawUnsafe<any[]>(
-      `INSERT INTO public.rutina_templates (nombre, descripcion, updated_at)
-       VALUES ($1, $2, now())
-       RETURNING id, nombre, descripcion, created_at, updated_at`,
-      nombre,
-      descripcion ?? null,
-    )
+    const template = await prisma.routineTemplates.create({
+      data: {
+        name: nombre,
+        description: descripcion ?? null,
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        created_at: true,
+        updated_at: true
+      }
+    })
 
-    return NextResponse.json(rows[0], { status: 201 })
+    // Map English fields to Spanish for API response
+    const templateResponse = {
+      id: template.id,
+      nombre: template.name,
+      descripcion: template.description,
+      created_at: template.created_at,
+      updated_at: template.updated_at
+    }
+
+    return NextResponse.json(templateResponse, { status: 201 })
   } catch (err) {
     console.error('POST /api/rutina-templates error', err)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })

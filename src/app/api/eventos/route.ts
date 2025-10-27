@@ -14,16 +14,16 @@ export async function GET(req: Request) {
     const to = searchParams.get('to')
     const tipo = searchParams.get('tipo')
 
-    const eventos = await prisma.eventos.findMany({
+    const eventos = await prisma.events.findMany({
       where: {
         AND: [
-          from ? { fecha: { gte: new Date(from) } } : {},
-          to ? { fecha: { lte: new Date(to) } } : {},
-          tipo ? { tipo } : {},
+          from ? { date: { gte: new Date(from) } } : {},
+          to ? { date: { lte: new Date(to) } } : {},
+          tipo ? { type: tipo } : {},
         ],
       },
-      orderBy: [{ fecha: 'asc' }, { hora: 'asc' }],
-      include: { cliente: true },
+      orderBy: [{ date: 'asc' }, { time: 'asc' }],
+      include: { client: true },
       take: 100,
     })
     return NextResponse.json(eventos)
@@ -56,23 +56,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
     }
 
-    const ev = await prisma.eventos.create({
+    const ev = await prisma.events.create({
       data: {
-        titulo,
-        descripcion,
-        fecha: new Date(fecha),
-        hora: parseHora(hora)!,
-        tipo,
-        cliente_id: cliente_id ?? null,
-        cliente_nombre,
-        entrenador,
-        duracion: duracion ?? 60,
-        estado: estado ?? 'programado',
-        max_participantes: max_participantes ?? 1,
-        precio,
-        notas,
+        title: titulo,
+        description: descripcion,
+        date: new Date(fecha),
+        time: parseHora(hora)!,
+        type: tipo,
+        client_id: cliente_id ?? null,
+        client_name: cliente_nombre,
+        trainer: entrenador,
+        duration: duracion ?? 60,
+        status: estado ?? 'scheduled',
+        max_participants: max_participantes ?? 1,
+        price: precio,
+        notes: notas,
       },
-      include: { cliente: true },
+      include: { client: true },
     })
     return NextResponse.json(ev, { status: 201 })
   } catch (err) {

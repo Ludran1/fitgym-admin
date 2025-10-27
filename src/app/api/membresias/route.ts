@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
-    const membresias = await prisma.membresias.findMany({
+    const membresias = await prisma.memberships.findMany({
       orderBy: { created_at: 'desc' },
     })
     return NextResponse.json(membresias)
@@ -31,16 +31,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
     }
 
-    const m = await prisma.membresias.create({
+    const m = await prisma.memberships.create({
       data: {
-        nombre,
-        descripcion,
-        tipo,
-        modalidad,
-        precio,
-        duracion,
-        caracteristicas: caracteristicas ?? [],
-        activa: activa ?? true,
+        name: nombre,
+        description: descripcion,
+        type: tipo,
+        mode: modalidad,
+        price: precio,
+        duration: duracion,
+        features: caracteristicas ?? [],
+        is_active: activa ?? true,
       },
     })
     return NextResponse.json(m, { status: 201 })

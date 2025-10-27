@@ -6,10 +6,10 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const list = await prisma.asistencias.findMany({
-      where: { evento_id: params.id },
-      include: { cliente: true },
-      orderBy: { fecha_asistencia: 'desc' },
+    const list = await prisma.attendances.findMany({
+      where: { event_id: params.id },
+      include: { client: true },
+      orderBy: { attendance_date: 'desc' },
     })
     return NextResponse.json(list)
   } catch (err) {
@@ -28,20 +28,20 @@ export async function POST(
     if (!cliente_id) return NextResponse.json({ error: 'cliente_id requerido' }, { status: 400 })
 
     // Verificar capacidad del evento
-    const ev = await prisma.eventos.findUnique({ where: { id: params.id } })
+    const ev = await prisma.events.findUnique({ where: { id: params.id } })
     if (!ev) return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 })
-    const participantesActuales = ev.participantes_actuales ?? 0
-    const maxParticipantes = ev.max_participantes ?? Number.MAX_SAFE_INTEGER
+    const participantesActuales = ev.current_participants ?? 0
+    const maxParticipantes = ev.max_participants ?? Number.MAX_SAFE_INTEGER
     if (participantesActuales >= maxParticipantes) {
       return NextResponse.json({ error: 'Evento sin cupos' }, { status: 409 })
     }
 
-    const reg = await prisma.asistencias.create({
+    const reg = await prisma.attendances.create({
       data: {
-        evento_id: params.id,
-        cliente_id,
-        estado: estado ?? 'presente',
-        notas,
+        event_id: params.id,
+        client_id: cliente_id,
+        status: estado ?? 'presente',
+        notes: notas,
       },
     })
     return NextResponse.json(reg, { status: 201 })

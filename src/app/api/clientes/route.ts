@@ -6,20 +6,20 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const q = searchParams.get('q')?.trim()
 
-    const clientes = await prisma.clientes.findMany({
+    const clientes = await prisma.clients.findMany({
       where: q
         ? {
-            OR: [
-              { nombre: { contains: q, mode: 'insensitive' } },
-              { email: { contains: q, mode: 'insensitive' } },
-              { telefono: { contains: q, mode: 'insensitive' } },
-              { dni: { contains: q, mode: 'insensitive' } },
-            ],
-          }
+          OR: [
+            { full_name: { contains: q, mode: 'insensitive' } },
+            { email: { contains: q, mode: 'insensitive' } },
+            { phone: { contains: q, mode: 'insensitive' } },
+            { dni: { contains: q, mode: 'insensitive' } },
+          ],
+        }
         : undefined,
       take: 50,
       orderBy: { created_at: 'desc' },
-      include: { membresia: true },
+      include: { membership: true },
     })
 
     return NextResponse.json(clientes)
@@ -58,24 +58,24 @@ export async function POST(req: Request) {
 
     // Si se proporciona membresía, completar metadatos y fechas
     if (membresia_id) {
-      const m = await prisma.membresias.findUnique({ where: { id: membresia_id } })
+      const m = await prisma.memberships.findUnique({ where: { id: membresia_id } })
       if (!m) return NextResponse.json({ error: 'Membresía no encontrada' }, { status: 404 })
 
       // Calcular fecha de fin sumando meses de duración desde hoy
       const hoy = new Date()
       const fecha_fin = new Date(hoy)
-      fecha_fin.setMonth(fecha_fin.getMonth() + (m.duracion || 1))
+      fecha_fin.setMonth(fecha_fin.getMonth() + (m.duration || 1))
 
-      data.membresia_id = membresia_id
-      data.nombre_membresia = m.nombre
-      data.tipo_membresia = m.tipo
-      data.fecha_fin = fecha_fin
-      data.estado = 'activa'
+      data.membership_id = membresia_id
+      data.membership_name = m.name
+      data.membership_type = m.type
+      data.end_date = fecha_fin
+      data.status = 'active'
     }
 
-    const cliente = await prisma.clientes.create({
+    const cliente = await prisma.clients.create({
       data,
-      include: { membresia: true },
+      include: { membership: true },
     })
 
     return NextResponse.json(cliente, { status: 201 })

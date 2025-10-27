@@ -8,36 +8,36 @@ export async function GET() {
     threeDaysAhead.setDate(threeDaysAhead.getDate() + 3)
 
     const [activos, porVencer, vencidos] = await Promise.all([
-      prisma.clientes.findMany({
+      prisma.clients.findMany({
         where: {
-          estado: 'activa',
+          status: 'active',
           OR: [
-            { fecha_fin: { gte: today } },
-            { fecha_fin: null },
+            { end_date: { gte: today } },
+            { end_date: null },
           ],
         },
-        select: { id: true, nombre: true, avatar_url: true, fecha_fin: true, nombre_membresia: true },
-        orderBy: { nombre: 'asc' },
+        select: { id: true, full_name: true, avatar_url: true, end_date: true, membership_name: true },
+        orderBy: { full_name: 'asc' },
         take: 50,
       }),
-      prisma.clientes.findMany({
+      prisma.clients.findMany({
         where: {
-          estado: 'activa',
-          fecha_fin: { gte: today, lte: threeDaysAhead },
+          status: 'active',
+          end_date: { gte: today, lte: threeDaysAhead },
         },
-        select: { id: true, nombre: true, avatar_url: true, fecha_fin: true, nombre_membresia: true },
-        orderBy: { fecha_fin: 'asc' },
+        select: { id: true, full_name: true, avatar_url: true, end_date: true, membership_name: true },
+        orderBy: { end_date: 'asc' },
         take: 50,
       }),
-      prisma.clientes.findMany({
+      prisma.clients.findMany({
         where: {
+          status: 'expired',
           OR: [
-            { estado: 'vencida' },
-            { fecha_fin: { lt: today } },
+            { end_date: { lt: today } },
           ],
         },
-        select: { id: true, nombre: true, avatar_url: true, fecha_fin: true, nombre_membresia: true },
-        orderBy: { nombre: 'asc' },
+        select: { id: true, full_name: true, avatar_url: true, end_date: true, membership_name: true },
+        orderBy: { full_name: 'asc' },
         take: 50,
       }),
     ])
