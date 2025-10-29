@@ -152,6 +152,22 @@ model membresias {
     @@index([activa])
 }
 
+model ejercicios {
+    id          String   @id @default(uuid()) @db.Uuid
+    nombre      String   @db.VarChar(255)
+    categoria   String?  @db.VarChar(50)
+    dificultad  String?  @db.VarChar(20)
+    musculos    String[]
+    descripcion String?
+    imagen_url  String?
+    video_url   String?
+    created_at  DateTime @default(now()) @db.Timestamptz(6)
+    updated_at  DateTime @updatedAt @db.Timestamptz(6)
+
+    @@index([categoria])
+    @@index([dificultad])
+}
+
 model perfiles {
     id              String   @id @db.Uuid
     user_id         String   @unique @db.Uuid

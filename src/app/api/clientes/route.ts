@@ -4,9 +4,23 @@ import prisma from '@/lib/prisma';
 import { EstadoCliente } from '@prisma/client';
 
 // GET - Obtener todos los clientes
-export async function GET() {
+export async function GET(request: Request) {
     try {
+        const { searchParams } = new URL(request.url);
+        const q = searchParams.get('q');
+
+        const where = q
+            ? {
+                OR: [
+                    { nombre: { contains: q, mode: 'insensitive' as const } },
+                    { email: { contains: q, mode: 'insensitive' as const } },
+                    { dni: { contains: q, mode: 'insensitive' as const } },
+                ],
+            }
+            : {};
+
         const clientes = await prisma.clientes.findMany({
+            where,
             include: {
                 membresias: {
                     select: {

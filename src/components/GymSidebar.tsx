@@ -78,7 +78,7 @@ export function GymSidebar() {
   };
 
   return (
-    <Sidebar className="border-r" variant="floating" collapsible="icon" data-testid="sidebar">
+    <Sidebar className="border-r" variant="sidebar" collapsible="icon" data-testid="sidebar">
       <SidebarHeader className="flex h-24 items-center px-4">
         <Link href="/" className="flex items-center gap-2">
           <Logo withText={state !== 'collapsed'} size={120} />

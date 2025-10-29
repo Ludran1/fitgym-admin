@@ -18,10 +18,10 @@ interface RutinaTemplate {
 
 interface TemplateEjercicio {
     id: string;
-    rutina_template_id: string;
+    template_id: string;
     ejercicio_id?: string | null;
-    nombre: string;
-    series?: number | null;
+    nombre: string | null;
+    sets?: number | null;
     repeticiones?: number | null;
     dia?: string | null;
     peso_sugerido?: number | null;
@@ -276,7 +276,7 @@ export default function RutinaPage() {
                                                         <div className="font-medium">{e.nombre}</div>
                                                         <div className="text-xs text-muted-foreground">
                                                             {e.dia ? <Badge variant="outline">{e.dia}</Badge> : null}
-                                                            {e.series ? <Badge variant="outline" className="ml-2">{e.series} series</Badge> : null}
+                                                            {e.sets ? <Badge variant="outline" className="ml-2">{e.sets} series</Badge> : null}
                                                             {e.repeticiones ? <Badge variant="outline" className="ml-2">{e.repeticiones} reps</Badge> : null}
                                                             {e.peso_sugerido ? <Badge variant="outline" className="ml-2">{e.peso_sugerido} kg</Badge> : null}
                                                             {e.orden ? <Badge variant="outline" className="ml-2">Orden {e.orden}</Badge> : null}
