@@ -10,11 +10,11 @@ export type ClienteFormData = {
   email: string;
   telefono: string;
   dni?: string | null;
-  fecha_nacimiento: Date;
+  fecha_nacimiento: string; // Cambiar de Date a string para coincidir con FormValues
   membresia_id?: string | null;
   nombre_membresia?: string | null;
-  fecha_inicio?: Date | null;
-  fecha_fin?: Date | null;
+  fecha_inicio?: string | null; // Cambiar de Date a string
+  fecha_fin?: string | null; // Cambiar de Date a string
   estado?: EstadoCliente;
 };
 
@@ -34,7 +34,7 @@ export const useClientes = () => {
     try {
       setLoading(true);
       const response = await fetch('/api/clientes');
-      
+
       if (!response.ok) {
         throw new Error('Error al cargar clientes');
       }
@@ -78,7 +78,7 @@ export const useClientes = () => {
 
   const confirmDelete = async () => {
     if (!clienteToDelete) return;
-    
+
     try {
       const response = await fetch(`/api/clientes/${clienteToDelete}`, {
         method: 'DELETE',
@@ -140,7 +140,7 @@ export const useClientes = () => {
         setClientes([data, ...clientes]);
         toast({
           title: "Cliente agregado",
-          description: "El nuevo cliente ha sido agregado correctamente",
+          description: "El nuevo cliente ha sido agregado correctamente"
         });
       }
 

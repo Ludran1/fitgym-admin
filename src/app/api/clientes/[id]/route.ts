@@ -48,21 +48,31 @@ export async function PUT(
     try {
         const body = await request.json();
 
+        // Construir objeto de actualización solo con campos presentes
+        const updateData: any = {};
+
+        if (body.nombre !== undefined) updateData.nombre = body.nombre;
+        if (body.email !== undefined) updateData.email = body.email;
+        if (body.telefono !== undefined) updateData.telefono = body.telefono;
+        if (body.dni !== undefined) updateData.dni = body.dni || null;
+        if (body.avatar_url !== undefined) updateData.avatar_url = body.avatar_url;
+        if (body.fecha_nacimiento !== undefined) {
+            updateData.fecha_nacimiento = body.fecha_nacimiento ? new Date(body.fecha_nacimiento) : null;
+        }
+        if (body.membresia_id !== undefined) updateData.membresia_id = body.membresia_id || null;
+        if (body.nombre_membresia !== undefined) updateData.nombre_membresia = body.nombre_membresia || null;
+        if (body.tipo_membresia !== undefined) updateData.tipo_membresia = body.tipo_membresia || null;
+        if (body.fecha_inicio !== undefined) {
+            updateData.fecha_inicio = body.fecha_inicio ? new Date(body.fecha_inicio) : null;
+        }
+        if (body.fecha_fin !== undefined) {
+            updateData.fecha_fin = body.fecha_fin ? new Date(body.fecha_fin) : null;
+        }
+        if (body.estado !== undefined) updateData.estado = body.estado as EstadoCliente;
+
         const cliente = await prisma.clientes.update({
             where: { id: params.id },
-            data: {
-                nombre: body.nombre,
-                email: body.email,
-                telefono: body.telefono,
-                dni: body.dni || null,
-                fecha_nacimiento: body.fecha_nacimiento ? new Date(body.fecha_nacimiento) : undefined,
-                membresia_id: body.membresia_id || null,
-                nombre_membresia: body.nombre_membresia || null,
-                tipo_membresia: body.tipo_membresia || null,
-                fecha_inicio: body.fecha_inicio ? new Date(body.fecha_inicio) : null,
-                fecha_fin: body.fecha_fin ? new Date(body.fecha_fin) : null,
-                estado: body.estado as EstadoCliente | undefined,
-            },
+            data: updateData,
             include: {
                 membresias: {
                     select: {

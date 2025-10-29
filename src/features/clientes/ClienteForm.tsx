@@ -26,7 +26,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { CheckCircle2, User, CreditCard, FileCheck, ChevronRight, ChevronLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-// Usamos el datepicker nativo del navegador con Input type="date"
+import { DatePicker } from "@/components/ui/date-picker";
 
 
 export const formSchema = z.object({
@@ -101,6 +101,12 @@ export function ClienteForm({
   useEffect(() => {
     if (isOpen) {
       setCurrentStep(clienteActual ? 1 : 1);
+    } else {
+      // Limpiar al cerrar el modal
+      setCurrentStep(1);
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      setTempPassword("");
     }
   }, [isOpen, clienteActual]);
 
@@ -115,37 +121,55 @@ export function ClienteForm({
     }
   };
 
-  const uploadPhotoForClient = async (clientId: string | number) => {
-    if (!photoFile) return;
+  const uploadPhotoForClient = async (clientId: string | number): Promise<string | null> => {
+    if (!photoFile) return null;
     try {
       setIsUploadingPhoto(true);
       const ext = photoFile.name.split('.').pop()?.toLowerCase() || 'jpg';
       const clientIdStr = String(clientId);
       const path = `clientes/${clientIdStr}/avatar-${Date.now()}.${ext}`;
+
+      let publicUrl = '';
+
       if (onPhotoUpload) {
-        const publicUrl = await onPhotoUpload(clientId, photoFile);
-        const { error: updateError } = await supabase
-          .from('clientes')
-          .update({ avatar_url: publicUrl })
-          .eq('id', clientId);
-        if (updateError) throw updateError;
+        publicUrl = await onPhotoUpload(clientId, photoFile);
+        // Actualizar con Prisma API
+        await fetch(`/api/clientes/${clientId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ avatar_url: publicUrl }),
+        });
         setPhotoPreview(publicUrl);
       } else {
+        // Subir a Supabase Storage
         const { error: uploadError } = await supabase.storage
           .from('avatars')
           .upload(path, photoFile, { upsert: true, contentType: photoFile.type });
+
         if (uploadError) throw uploadError;
+
         const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path);
-        const publicUrl = pub.publicUrl;
-        const { error: updateError } = await supabase
-          .from('clientes')
-          .update({ avatar_url: publicUrl })
-          .eq('id', clientId);
-        if (updateError) throw updateError;
+        publicUrl = pub.publicUrl;
+
+        // Actualizar con Prisma API en lugar de Supabase directamente
+        const response = await fetch(`/api/clientes/${clientId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ avatar_url: publicUrl }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Error actualizando avatar');
+        }
+
         setPhotoPreview(publicUrl);
       }
+
+      return publicUrl;
     } catch (err) {
       console.error('Error subiendo foto:', err);
+      throw err; // Re-lanzar el error para que se maneje en el formulario
     } finally {
       setIsUploadingPhoto(false);
     }
@@ -224,6 +248,7 @@ export function ClienteForm({
         nombre: "",
         email: "",
         telefono: "",
+        dni: "",
         fecha_nacimiento: "",
         membresia_id: "",
         fecha_inicio: format(new Date(), "yyyy-MM-dd"), // Fecha de hoy por defecto
@@ -309,25 +334,30 @@ export function ClienteForm({
         if (photoFile && saved?.id) {
           await uploadPhotoForClient(saved.id);
         }
-        const finalEmail = values.email;
-        const finalPassword = tempPassword || generatePassword();
-        if (autoCreateAccount && finalEmail && finalPassword) {
-          try {
-            if (onCreateAccount) {
-              await onCreateAccount(finalEmail, finalPassword, values);
-            } else {
-              await supabase.auth.signUp({
-                email: finalEmail,
-                password: finalPassword,
-                options: {
-                  data: { role: 'cliente', dni: values.dni || null, nombre: values.nombre }
-                }
-              });
+
+        // Solo crear cuenta si es un NUEVO cliente (no hay clienteActual)
+        if (!clienteActual) {
+          const finalEmail = values.email;
+          const finalPassword = tempPassword || generatePassword();
+          if (autoCreateAccount && finalEmail && finalPassword) {
+            try {
+              if (onCreateAccount) {
+                await onCreateAccount(finalEmail, finalPassword, values);
+              } else {
+                await supabase.auth.signUp({
+                  email: finalEmail,
+                  password: finalPassword,
+                  options: {
+                    data: { role: 'cliente', dni: values.dni || null, nombre: values.nombre }
+                  }
+                });
+              }
+            } catch (authErr) {
+              console.warn('No se pudo crear la cuenta en Auth:', authErr);
             }
-          } catch (authErr) {
-            console.warn('No se pudo crear la cuenta en Auth:', authErr);
           }
         }
+
         onOpenChange(false);
         setCurrentStep(1); // Reset para próxima vez
       } else {
@@ -335,25 +365,30 @@ export function ClienteForm({
         if (photoFile && clienteActual?.id) {
           await uploadPhotoForClient(clienteActual.id);
         }
-        const finalEmail = values.email;
-        const finalPassword = tempPassword || generatePassword();
-        if (autoCreateAccount && finalEmail && finalPassword) {
-          try {
-            if (onCreateAccount) {
-              await onCreateAccount(finalEmail, finalPassword, values);
-            } else {
-              await supabase.auth.signUp({
-                email: finalEmail,
-                password: finalPassword,
-                options: {
-                  data: { role: 'cliente', dni: values.dni || null, nombre: values.nombre }
-                }
-              });
+
+        // Solo crear cuenta si es un NUEVO cliente (no hay clienteActual)
+        if (!clienteActual) {
+          const finalEmail = values.email;
+          const finalPassword = tempPassword || generatePassword();
+          if (autoCreateAccount && finalEmail && finalPassword) {
+            try {
+              if (onCreateAccount) {
+                await onCreateAccount(finalEmail, finalPassword, values);
+              } else {
+                await supabase.auth.signUp({
+                  email: finalEmail,
+                  password: finalPassword,
+                  options: {
+                    data: { role: 'cliente', dni: values.dni || null, nombre: values.nombre }
+                  }
+                });
+              }
+            } catch (authErr) {
+              console.warn('No se pudo crear la cuenta en Auth:', authErr);
             }
-          } catch (authErr) {
-            console.warn('No se pudo crear la cuenta en Auth:', authErr);
           }
         }
+
         onOpenChange(false);
         setCurrentStep(1);
       }
@@ -423,36 +458,47 @@ export function ClienteForm({
 
         {/* Progress Indicator */}
         {!clienteActual && (
-          <div className="flex items-center justify-between mb-6">
-            {[1, 2, 3].map((step) => (
-              <div key={step} className="flex items-center flex-1">
-                <div className="flex flex-col items-center flex-1">
-                  <div
-                    className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-colors ${step === currentStep
-                        ? "border-primary bg-primary text-primary-foreground"
+          <div className="flex items-center justify-center px-4 sm:px-8 mb-2">
+            <div className="flex items-center w-full max-w-2xl">
+              {[1, 2, 3].map((step) => (
+                <div key={step} className="flex items-center flex-1">
+                  <div className="flex flex-col items-center flex-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Solo permitir navegar a pasos ya visitados o al paso actual
+                        if (step <= currentStep) {
+                          setCurrentStep(step);
+                        }
+                      }}
+                      disabled={step > currentStep}
+                      className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all ${step === currentStep
+                        ? "border-primary bg-primary text-primary-foreground shadow-md scale-110"
                         : step < currentStep
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-muted bg-muted text-muted-foreground"
-                      }`}
-                  >
-                    {step < currentStep ? (
-                      <CheckCircle2 className="h-6 w-6" />
-                    ) : (
-                      getStepIcon(step)
-                    )}
+                          ? "border-primary bg-primary text-primary-foreground hover:scale-105 cursor-pointer"
+                          : "border-muted bg-muted text-muted-foreground cursor-not-allowed"
+                        }`}
+                    >
+                      {step < currentStep ? (
+                        <CheckCircle2 className="h-6 w-6" />
+                      ) : (
+                        getStepIcon(step)
+                      )}
+                    </button>
+                    <span className={`text-xs mt-2 font-medium text-center max-w-[80px] leading-tight ${step === currentStep ? "text-primary" : "text-muted-foreground"
+                      } hidden sm:block`}>
+                      {getStepTitle(step)}
+                    </span>
                   </div>
-                  <span className="text-xs mt-1 font-medium hidden sm:block">
-                    {getStepTitle(step)}
-                  </span>
+                  {step < totalSteps && (
+                    <div
+                      className={`h-0.5 flex-1 mx-2 transition-all ${step < currentStep ? "bg-primary" : "bg-muted"
+                        }`}
+                    />
+                  )}
                 </div>
-                {step < totalSteps && (
-                  <div
-                    className={`h-0.5 flex-1 mx-2 transition-colors ${step < currentStep ? "bg-primary" : "bg-muted"
-                      }`}
-                  />
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
 
@@ -554,7 +600,11 @@ export function ClienteForm({
                           <FormItem>
                             <FormLabel>Fecha de nacimiento *</FormLabel>
                             <FormControl>
-                              <Input type="date" {...field} />
+                              <DatePicker
+                                value={field.value}
+                                onChange={field.onChange}
+                                placeholder="Selecciona fecha de nacimiento"
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -657,16 +707,14 @@ export function ClienteForm({
                           <FormItem>
                             <FormLabel>Fecha de inicio *</FormLabel>
                             <FormControl>
-                              <Input
-                                type="date"
-                                {...field}
-                                onChange={(e) => {
-                                  field.onChange(e.target.value);
+                              <DatePicker
+                                value={field.value}
+                                onChange={(val) => {
+                                  field.onChange(val);
                                   const memId = form.getValues("membresia_id");
                                   const mem = membresiasDisponibles.find(
                                     (m) => m.id === memId
                                   );
-                                  const val = e.target.value;
                                   if (val && mem?.duracion) {
                                     const dt = parse(val, "yyyy-MM-dd", new Date());
                                     const fin = format(
@@ -676,6 +724,7 @@ export function ClienteForm({
                                     form.setValue("fecha_fin", fin);
                                   }
                                 }}
+                                placeholder="Selecciona fecha de inicio"
                               />
                             </FormControl>
                             <FormMessage />
@@ -690,11 +739,11 @@ export function ClienteForm({
                           <FormItem>
                             <FormLabel>Fecha de vencimiento</FormLabel>
                             <FormControl>
-                              <Input
-                                type="date"
-                                {...field}
-                                readOnly
-                                className="bg-muted"
+                              <DatePicker
+                                value={field.value}
+                                onChange={field.onChange}
+                                disabled
+                                placeholder="Calculada automáticamente"
                               />
                             </FormControl>
                             <p className="text-xs text-muted-foreground">
@@ -753,16 +802,15 @@ export function ClienteForm({
                             Fecha de nacimiento:
                           </span>
                           <p className="font-medium">
-                            {form.getValues("fecha_nacimiento")
-                              ? format(
-                                parse(
-                                  form.getValues("fecha_nacimiento"),
-                                  "yyyy-MM-dd",
-                                  new Date()
-                                ),
-                                "dd/MM/yyyy"
-                              )
-                              : "-"}
+                            {(() => {
+                              const fecha = form.getValues("fecha_nacimiento");
+                              if (!fecha || fecha.trim() === "") return "-";
+                              try {
+                                return format(parse(fecha, "yyyy-MM-dd", new Date()), "dd/MM/yyyy");
+                              } catch {
+                                return "-";
+                              }
+                            })()}
                           </p>
                         </div>
                       </div>
@@ -795,16 +843,15 @@ export function ClienteForm({
                         <div>
                           <span className="text-muted-foreground">Inicio:</span>
                           <p className="font-medium">
-                            {form.getValues("fecha_inicio")
-                              ? format(
-                                parse(
-                                  form.getValues("fecha_inicio") || "",
-                                  "yyyy-MM-dd",
-                                  new Date()
-                                ),
-                                "dd/MM/yyyy"
-                              )
-                              : "-"}
+                            {(() => {
+                              const fecha = form.getValues("fecha_inicio");
+                              if (!fecha || fecha.trim() === "") return "-";
+                              try {
+                                return format(parse(fecha, "yyyy-MM-dd", new Date()), "dd/MM/yyyy");
+                              } catch {
+                                return "-";
+                              }
+                            })()}
                           </p>
                         </div>
                         <div>
@@ -812,16 +859,15 @@ export function ClienteForm({
                             Vencimiento:
                           </span>
                           <p className="font-medium">
-                            {form.getValues("fecha_fin")
-                              ? format(
-                                parse(
-                                  form.getValues("fecha_fin") || "",
-                                  "yyyy-MM-dd",
-                                  new Date()
-                                ),
-                                "dd/MM/yyyy"
-                              )
-                              : "-"}
+                            {(() => {
+                              const fecha = form.getValues("fecha_fin");
+                              if (!fecha || fecha.trim() === "") return "-";
+                              try {
+                                return format(parse(fecha, "yyyy-MM-dd", new Date()), "dd/MM/yyyy");
+                              } catch {
+                                return "-";
+                              }
+                            })()}
                           </p>
                         </div>
                       </div>
@@ -832,8 +878,8 @@ export function ClienteForm({
                       <h4 className="font-semibold mb-2">Información de Acceso</h4>
                       <div className="space-y-2 text-sm">
                         <div>
-                          <span className="text-muted-foreground">Email:</span>
-                          <p className="font-mono">{form.getValues("email")}</p>
+                          <span className="text-muted-foreground">Usuario:</span>
+                          <p className="font-mono">{form.getValues("dni")}</p>
                         </div>
                         <div>
                           <span className="text-muted-foreground">

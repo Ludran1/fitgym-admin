@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { format, parse } from "date-fns";
+import { es } from "date-fns/locale";
 import { ChevronDownIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -27,7 +28,27 @@ export function DatePicker({
   disabled,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
-  const selected = value ? parse(value, STORAGE_FORMAT, new Date()) : undefined;
+
+  // Tratar strings vacíos como undefined y validar formato
+  const normalizedValue = value && value.trim() !== "" ? value : undefined;
+
+  // Intentar parsear la fecha de forma segura
+  let selected: Date | undefined;
+  let displayText = placeholder;
+
+  if (normalizedValue) {
+    try {
+      const parsedDate = parse(normalizedValue, STORAGE_FORMAT, new Date());
+      // Verificar que la fecha sea válida
+      if (!isNaN(parsedDate.getTime())) {
+        selected = parsedDate;
+        displayText = format(parsedDate, DISPLAY_FORMAT, { locale: es });
+      }
+    } catch (error) {
+      console.warn("Error parseando fecha:", normalizedValue, error);
+      // Si hay error, simplemente no establecemos la fecha
+    }
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -37,15 +58,15 @@ export function DatePicker({
           disabled={disabled}
           className={cn(
             "w-full pl-3 text-left font-normal",
-            !value && "text-muted-foreground",
+            !normalizedValue && "text-muted-foreground",
             className
           )}
         >
-          {value ? format(parse(value, STORAGE_FORMAT, new Date()), DISPLAY_FORMAT) : placeholder}
+          {displayText}
           <ChevronDownIcon className="ml-auto h-4 w-4 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0">
+      <PopoverContent className="w-auto p-0 z-[100] pointer-events-auto" align="start">
         <Calendar
           mode="single"
           selected={selected}
@@ -54,6 +75,7 @@ export function DatePicker({
             onChange?.(next);
             if (date) setOpen(false);
           }}
+          locale={es}
           initialFocus
         />
       </PopoverContent>
