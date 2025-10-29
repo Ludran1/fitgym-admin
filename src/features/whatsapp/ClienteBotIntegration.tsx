@@ -3,11 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { 
-  Users, 
-  MessageSquare, 
-  Phone, 
-  Mail, 
+import {
+  Users,
+  MessageSquare,
+  Phone,
+  Mail,
   Calendar,
   Activity,
   AlertCircle,
@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useClientes } from '@/features/clientes/useClientes';
 import { useBotWhatsApp } from './useBotWhatsApp';
+import type { Cliente as ClienteWhatsApp } from './types';
 import type { Database } from '@/lib/supabase';
 
 type ClienteRow = Database['public']['Tables']['clientes']['Row'];
@@ -33,17 +34,17 @@ export function ClienteBotIntegration({ onClienteSeleccionado }: ClienteBotInteg
 
   // Sincronizar clientes con el bot
   useEffect(() => {
-    // Convertir clientes del sistema (Supabase) al formato del bot
-    const clientesBot = clientes.map((cliente) => ({
+    // Convertir clientes del sistema (Prisma) al formato del bot
+    const clientesBot: ClienteWhatsApp[] = clientes.map((cliente) => ({
       id: cliente.id,
       nombre: cliente.nombre,
       telefono: cliente.telefono,
       email: cliente.email,
-      // Mapear estado de Supabase a membresía del bot
+      // Mapear estado de Prisma a membresía del bot
       membresia: (cliente.estado === 'suspendida' ? 'pendiente' : (cliente.estado as 'activa' | 'vencida' | 'pendiente')),
       tipoMembresia: (cliente.estado === 'suspendida' ? 'pendiente' : (cliente.estado as 'activa' | 'vencida' | 'pendiente')),
-      fechaRegistro: cliente.fecha_registro,
-      ultimaVisita: cliente.fecha_fin ?? undefined,
+      fechaRegistro: cliente.fecha_registro instanceof Date ? cliente.fecha_registro.toISOString() : cliente.fecha_registro,
+      ultimaVisita: cliente.fecha_fin instanceof Date ? cliente.fecha_fin.toISOString() : (cliente.fecha_fin || undefined),
     }));
 
     actualizarClientes(clientesBot);
@@ -52,7 +53,7 @@ export function ClienteBotIntegration({ onClienteSeleccionado }: ClienteBotInteg
     const clientesWhatsApp = clientes.filter(
       (cliente) => cliente.telefono && cliente.telefono.length >= 9
     );
-    setClientesConWhatsApp(clientesWhatsApp);
+    setClientesConWhatsApp(clientesWhatsApp as any);
   }, [clientes, actualizarClientes]);
 
   // Obtener conversaciones escaladas
@@ -84,20 +85,20 @@ export function ClienteBotIntegration({ onClienteSeleccionado }: ClienteBotInteg
     tipo: 'bienvenida' | 'recordatorio' | 'vencimiento'
   ) => {
     const estadoMembresia = obtenerEstadoMembresia(cliente);
-    
+
     switch (tipo) {
       case 'bienvenida':
         return `¡Hola ${cliente.nombre}! 👋\n\nBienvenido a FitGym. Tu membresía está ${estadoMembresia.texto.toLowerCase()}.\n\n¿En qué puedo ayudarte hoy?`;
-      
+
       case 'recordatorio':
         return `Hola ${cliente.nombre} 🏋️‍♂️\n\nTe recordamos que tienes ${cliente.asistencias} asistencias este mes.\n\n¡Sigue así! 💪`;
-      
+
       case 'vencimiento':
         if (estadoMembresia.estado === 'por-vencer') {
           return `Hola ${cliente.nombre} ⏰\n\nTu membresía vence en ${estadoMembresia.texto}.\n\n¿Te gustaría renovarla? Contáctanos para más información.`;
         }
         return `Hola ${cliente.nombre}\n\nTu membresía ha vencido. ¡Renuévala para seguir disfrutando de nuestros servicios!`;
-      
+
       default:
         return `Hola ${cliente.nombre}, ¿en qué puedo ayudarte?`;
     }
@@ -177,7 +178,7 @@ export function ClienteBotIntegration({ onClienteSeleccionado }: ClienteBotInteg
           <div className="space-y-3">
             {clientesConWhatsApp.slice(0, 5).map((cliente) => {
               const estadoMembresia = obtenerEstadoMembresia(cliente);
-              
+
               return (
                 <div
                   key={cliente.id}
@@ -214,7 +215,7 @@ export function ClienteBotIntegration({ onClienteSeleccionado }: ClienteBotInteg
               );
             })}
           </div>
-          
+
           {clientesConWhatsApp.length > 5 && (
             <div className="mt-4 text-center">
               <Button variant="outline" size="sm">
@@ -251,13 +252,13 @@ export function ClienteBotIntegration({ onClienteSeleccionado }: ClienteBotInteg
                   </div>
                   <Badge variant="outline">Ejemplo</Badge>
                 </div>
-                
+
                 <div className="space-y-2">
                   <div className="bg-muted p-3 rounded-lg text-sm">
                     <strong>Bienvenida:</strong><br />
                     {generarMensajePersonalizado(cliente, 'bienvenida')}
                   </div>
-                  
+
                   {obtenerEstadoMembresia(cliente).estado === 'por-vencer' && (
                     <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg text-sm">
                       <strong>Recordatorio de vencimiento:</strong><br />

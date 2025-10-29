@@ -58,8 +58,11 @@ export function ExpiringMemberships() {
           <div className="space-y-4">
             {expiringClients.map((cliente) => {
               const status = getMembershipStatus(cliente.fecha_fin);
-              const daysRemaining = calcDaysRemaining(cliente.fecha_fin);
-              
+              const fechaFinStr = cliente.fecha_fin instanceof Date
+                ? cliente.fecha_fin.toISOString()
+                : cliente.fecha_fin;
+              const daysRemaining = calcDaysRemaining(fechaFinStr);
+
               return (
                 <div
                   key={cliente.id}
@@ -85,7 +88,7 @@ export function ExpiringMemberships() {
                       variant={status === 'por_vencer' ? 'destructive' : 'secondary'}
                       className={`${getStatusColor(status)} text-xs`}
                     >
-                      {daysRemaining !== null && daysRemaining >= 0 
+                      {daysRemaining !== null && daysRemaining >= 0
                         ? `${daysRemaining} días`
                         : getStatusText(status)
                       }

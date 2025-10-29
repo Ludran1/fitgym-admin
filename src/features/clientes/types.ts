@@ -9,12 +9,12 @@ export interface Cliente {
   tipoMembresia?: string; // ID de la membresía asignada
   nombreMembresia?: string; // Nombre de la membresía para mostrar
   membresia_id?: string; // ID de la membresía asignada
-  fecha_nacimiento?: string; // Fecha de nacimiento del cliente
-  fecha_inicio: string;
-  fecha_fin: string;
+  fecha_nacimiento?: string | Date; // Fecha de nacimiento del cliente
+  fecha_inicio: string | Date;
+  fecha_fin: string | Date | null;
   asistencias: number;
   avatarUrl?: string;
-  fechaNacimiento: string;
+  fechaNacimiento: string | Date;
 }
 
 export const estadoStyle = {
