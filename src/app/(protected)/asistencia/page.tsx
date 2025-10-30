@@ -177,7 +177,7 @@ export default function Asistencia() {
     } catch (error: any) {
       // El error ya fue manejado en el hook, pero podemos agregar lógica específica aquí
       console.error('Error registrando asistencia:', error);
-      
+
       // Para el QR scanner, limpiar el estado si hay error de asistencia duplicada
       if (tipo === "qr" && error.message.includes('ya registró su asistencia hoy')) {
         setLastRegisteredClient(`${cliente.nombre} - Ya registrado hoy`);
@@ -563,7 +563,6 @@ export default function Asistencia() {
                       <TableHead>Cliente</TableHead>
                       <TableHead>Fecha</TableHead>
                       <TableHead>Hora</TableHead>
-                      <TableHead>Membresía</TableHead>
                       <TableHead>Vence</TableHead>
                       <TableHead>Estado</TableHead>
                       <TableHead>Método</TableHead>
@@ -595,12 +594,6 @@ export default function Asistencia() {
                           {new Date(asistencia.fecha).toLocaleDateString()}
                         </TableCell>
                         <TableCell>{asistencia.hora}</TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{cliente?.nombre_membresia ?? "Sin membresía"}</p>
-                            <p className="text-xs text-muted-foreground">{cliente?.tipo_membresia ?? ""}</p>
-                          </div>
-                        </TableCell>
                         <TableCell>
                           {cliente?.fecha_fin ? new Date(cliente.fecha_fin).toLocaleDateString() : "—"}
                         </TableCell>

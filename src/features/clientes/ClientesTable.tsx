@@ -64,7 +64,6 @@ export function ClientesTable({
                 <TableHead>Cliente</TableHead>
                 <TableHead>Contacto</TableHead>
                 <TableHead>Fecha Nacimiento</TableHead>
-                <TableHead>Membresía</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
@@ -109,11 +108,6 @@ export function ClientesTable({
                           new Date(cliente.fecha_nacimiento).toLocaleDateString() :
                           'No especificada'
                         }
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="default">
-                          {cliente.membresia_id ? 'Con membresía' : 'Sin membresía'}
-                        </Badge>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
