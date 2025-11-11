@@ -97,10 +97,7 @@ export function ClientesTable({
                       </TableCell>
                       <TableCell>
                         <div>
-                          <p>{cliente.email}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {cliente.telefono}
-                          </p>
+                          {cliente.telefono}
                         </div>
                       </TableCell>
                       <TableCell>
