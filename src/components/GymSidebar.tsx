@@ -14,7 +14,8 @@ import {
   Menu,
   Fingerprint,
   CreditCard,
-  User
+  User,
+  UserCheck
 } from 'lucide-react';
 import {
   Sidebar,
@@ -51,6 +52,7 @@ const sidebarSections: { label: string; items: SidebarItem[] }[] = [
     label: 'Gestión',
     items: [
       { icon: Fingerprint, label: 'Asistencia', href: '/asistencia' },
+      { icon: UserCheck, label: 'Aforo', href: '/aforo' },
       { icon: Users, label: 'Clientes', href: '/clientes' },
       { icon: CreditCard, label: 'Membresías', href: '/membresias' },
       { icon: Dumbbell, label: 'Ejercicios', href: '/ejercicios' },

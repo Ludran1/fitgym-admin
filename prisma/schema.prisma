@@ -65,18 +65,23 @@ enum EstadoTarjeta {
 // =====================================================
 
 model asistencias {
-    id               String   @id @db.Uuid
-    evento_id        String?  @db.Uuid
-    cliente_id       String   @db.Uuid
-    fecha_asistencia DateTime @default(now()) @db.Timestamptz(6)
-    estado           String   @default("presente") @db.VarChar(20)
+    id               String    @id @db.Uuid
+    evento_id        String?   @db.Uuid
+    cliente_id       String    @db.Uuid
+    fecha_asistencia DateTime  @default(now()) @db.Timestamptz(6)
+    hora_entrada     DateTime  @default(now()) @db.Timestamptz(6)
+    hora_salida      DateTime? @db.Timestamptz(6)
+    duracion_minutos Int? // Duración calculada en minutos
+    estado           String    @default("presente") @db.VarChar(20)
     notas            String?
-    created_at       DateTime @default(now()) @db.Timestamptz(6)
-    clientes         clientes @relation(fields: [cliente_id], references: [id], onDelete: Cascade)
-    eventos          eventos? @relation(fields: [evento_id], references: [id], onDelete: Cascade)
+    created_at       DateTime  @default(now()) @db.Timestamptz(6)
+    clientes         clientes  @relation(fields: [cliente_id], references: [id], onDelete: Cascade)
+    eventos          eventos?  @relation(fields: [evento_id], references: [id], onDelete: Cascade)
 
     @@unique([evento_id, cliente_id])
     @@index([cliente_id])
+    @@index([fecha_asistencia])
+    @@index([hora_salida])
 }
 
 model clientes {
@@ -238,7 +243,21 @@ model tarjetas_acceso {
     codigo         String    @unique @db.VarChar(64)
     estado         String    @default("activa") @db.VarChar(20)
     ultima_entrada DateTime? @db.Timestamptz(6)
-    created_at     DateTime  @default(now()) @db.Timestamptz(6)
-    updated_at     DateTime  @db.Timestamptz(6)
-    clientes       clientes  @relation(fields: [cliente_id], references: [id])
+    clientes       clientes  @relation(fields: [cliente_id], references: [id], onDelete: Cascade)
+}
+
+// =====================================================
+// CONFIGURACIÓN DEL GIMNASIO
+// =====================================================
+
+model configuracion_gym {
+    id                          String   @id @default(uuid()) @db.Uuid
+    capacidad_maxima            Int      @default(50) // Capacidad máxima del gym
+    tiempo_permanencia_promedio Int      @default(90) // Tiempo promedio en minutos (1.5h = 90min)
+    alerta_aforo_porcentaje     Int      @default(80) // Alerta cuando se alcanza el 80% del aforo
+    horario_apertura            String   @default("06:00") @db.VarChar(5)
+    horario_cierre              String   @default("22:00") @db.VarChar(5)
+    dias_operacion              String[] @default(["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"])
+    created_at                  DateTime @default(now()) @db.Timestamptz(6)
+    updated_at                  DateTime @updatedAt @db.Timestamptz(6)
 }

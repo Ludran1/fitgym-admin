@@ -109,13 +109,13 @@ export async function POST(request: Request) {
 
         if (asistenciaHoy) {
             const horaAsistencia = new Date(asistenciaHoy.fecha_asistencia)
-                .toLocaleTimeString('es-ES', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
+                .toLocaleTimeString('es-ES', {
+                    hour: '2-digit',
+                    minute: '2-digit'
                 });
-            
+
             return NextResponse.json(
-                { 
+                {
                     error: 'El cliente ya registró su asistencia hoy',
                     details: `Asistencia registrada a las ${horaAsistencia}`,
                     asistencia_existente: {
@@ -132,7 +132,9 @@ export async function POST(request: Request) {
         const { randomUUID } = await import('crypto');
         const id = randomUUID();
 
-        // Crear la asistencia
+        const ahora = new Date();
+
+        // Crear la asistencia con hora_entrada
         const asistencia = await prisma.asistencias.create({
             data: {
                 id,
@@ -140,6 +142,7 @@ export async function POST(request: Request) {
                 evento_id: evento_id || null,
                 estado: estado || 'presente',
                 notas: notas || null,
+                hora_entrada: ahora,
             },
             include: {
                 clientes: {

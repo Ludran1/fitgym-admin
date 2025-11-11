@@ -228,9 +228,28 @@ export function ClienteForm({
   useEffect(() => {
     if (clienteActual) {
       // Helper para convertir Date | null a string
-      const formatDate = (date: Date | null) => {
+      const formatDate = (date: Date | string | null) => {
         if (!date) return "";
-        return date instanceof Date ? format(date, "yyyy-MM-dd") : date;
+
+        // Si ya es un string, devolverlo tal como está
+        if (typeof date === 'string') return date;
+
+        // Si es un Date, formatearlo
+        if (date instanceof Date) {
+          return format(date, "yyyy-MM-dd");
+        }
+
+        // Si es un string que parece una fecha ISO, intentar parsearlo
+        try {
+          const parsedDate = new Date(date);
+          if (!isNaN(parsedDate.getTime())) {
+            return format(parsedDate, "yyyy-MM-dd");
+          }
+        } catch (error) {
+          console.warn("Error parseando fecha:", date, error);
+        }
+
+        return "";
       };
 
       form.reset({
@@ -612,21 +631,24 @@ export function ClienteForm({
                       />
                     </div>
 
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email (generado automáticamente)</FormLabel>
-                          <FormControl>
-                            <Input {...field} readOnly className="bg-muted" />
-                          </FormControl>
-                          <p className="text-xs text-muted-foreground">
-                            Se genera automáticamente como: dni@{dniEmailDomain}
-                          </p>
-                        </FormItem>
-                      )}
-                    />
+                    {autoCreateAccount && (
+                      <FormField
+                        control={form.control}
+                        name="email"
+                        disabled
+                        render={({ field }) => (
+                          <FormItem className="col-span-2">
+                            <FormLabel>Email (generado automáticamente)</FormLabel>
+                            <FormControl>
+                              <Input {...field} readOnly className="bg-muted" />
+                            </FormControl>
+                            <p className="text-xs text-muted-foreground">
+                              Se genera automáticamente como: dni@{dniEmailDomain}
+                            </p>
+                          </FormItem>
+                        )}
+                      />
+                    )}
                   </CardContent>
                 </Card>
               </div>

@@ -52,6 +52,7 @@ export default function Clientes() {
         clienteActual={clienteActual}
         membresiasDisponibles={membresiasDisponibles}
         saveCliente={saveCliente}
+        autoCreateAccount={false}
       />
 
       <ConfirmationDialog

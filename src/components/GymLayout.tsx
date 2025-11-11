@@ -96,7 +96,7 @@ export function GymLayout({ children }: { children: React.ReactNode }) {
             </div>
             <div className="flex items-center gap-2 md:gap-4">
               <DropdownMenu open={notificacionesAbiertas} onOpenChange={setNotificacionesAbiertas}>
-                <DropdownMenuTrigger asChild>
+                {/* <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="relative">
                     <Bell className="h-4 w-4 md:h-5 md:w-5" />
                     {eventosProximos.length > 0 && (
@@ -107,7 +107,7 @@ export function GymLayout({ children }: { children: React.ReactNode }) {
                       </Badge>
                     )}
                   </Button>
-                </DropdownMenuTrigger>
+                </DropdownMenuTrigger> */}
                 <DropdownMenuContent className="w-72 md:w-80" align="end" forceMount>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">

@@ -80,7 +80,7 @@ export function DatePicker({
           captionLayout="dropdown"
           fromYear={1900}
           toYear={new Date().getFullYear()}
-          defaultMonth={selected || new Date(2000, 0)}
+          defaultMonth={selected}
         />
       </PopoverContent>
     </Popover>
