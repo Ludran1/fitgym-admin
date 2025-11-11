@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -20,13 +21,22 @@ const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   user: null,
   session: null,
-  login: () => {},
-  logout: () => {},
+  login: () => { },
+  logout: () => { },
 });
 
 export const useAuth = () => useContext(AuthContext);
 
-const queryClient = new QueryClient();
+// Configurar QueryClient con opciones por defecto
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30 * 1000, // 30 segundos
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -50,7 +60,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     }
     supabase.auth
       .signOut()
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => {
         setIsAuthenticated(false);
         setSession(null);
@@ -111,6 +121,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <Sonner />
           {children}
         </TooltipProvider>
+        {/* React Query Devtools - solo visible en desarrollo */}
+        <ReactQueryDevtools initialIsOpen={false} position="bottom" />
       </QueryClientProvider>
     </AuthContext.Provider>
   );
