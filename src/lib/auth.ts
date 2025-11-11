@@ -21,7 +21,7 @@ export function getSupabaseToken(request: NextRequest): string | undefined {
 
     // Log para debugging (solo en desarrollo)
     if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 [Auth] Cookies disponibles:', allCookies.map(c => c.name));
+        // console.log('🔍 [Auth] Cookies disponibles:', allCookies.map(c => c.name));
     }
 
     // Buscar cookies que Supabase usa (formato: sb-{project-ref}-auth-token)
@@ -61,7 +61,7 @@ export function getSupabaseToken(request: NextRequest): string | undefined {
         }
     }
 
-    console.warn('⚠️ [Auth] No se encontró token de autenticación');
+    // console.warn('⚠️ [Auth] No se encontró token de autenticación');
     return undefined;
 }
 

@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
+import { authenticatedFetch } from "@/lib/fetch-utils";
 import {
     Card,
     CardContent,
@@ -106,7 +107,7 @@ export function RegistroAsistenciaCard() {
 
         try {
             // Buscar cliente por DNI en la API
-            const response = await fetch(`/api/clientes/validar-dni?dni=${dniInput}`);
+            const response = await authenticatedFetch(`/api/clientes/validar-dni?dni=${dniInput}`);
 
             if (!response.ok) {
                 toast({
@@ -170,15 +171,15 @@ export function RegistroAsistenciaCard() {
                 }
 
                 if (contenido.startsWith("CLIENT:")) {
-                    const id = contenido.slice("CLIENT:".length);
-                    const response = await fetch(`/api/clientes/${id}`);
+                    const id = contenido.slice(7);
+                    const response = await authenticatedFetch(`/api/clientes/${id}`);
 
                     if (response.ok) {
                         cliente = await response.json();
                     }
                 } else {
                     // Intentar buscar por DNI
-                    const response = await fetch(
+                    const response = await authenticatedFetch(
                         `/api/clientes/validar-dni?dni=${contenido}`
                     );
 

@@ -4,29 +4,34 @@ import type { User, Session } from "@supabase/supabase-js";
 
 interface AuthState {
     isAuthenticated: boolean;
+    isLoading: boolean;
     user: User | null;
     session: Session | null;
     login: (user: User, session: Session) => void;
     logout: () => void;
     updateUser: (userData: Partial<User>) => void;
     setSession: (session: Session | null) => void;
+    setLoading: (loading: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
     persist(
         (set) => ({
             isAuthenticated: false,
+            isLoading: true, // Empieza en true mientras se verifica la sesión
             user: null,
             session: null,
             login: (user, session) =>
                 set({
                     isAuthenticated: true,
+                    isLoading: false,
                     user,
                     session,
                 }),
             logout: () =>
                 set({
                     isAuthenticated: false,
+                    isLoading: false,
                     user: null,
                     session: null,
                 }),
@@ -39,10 +44,21 @@ export const useAuthStore = create<AuthState>()(
                     session,
                     user: session?.user ?? null,
                     isAuthenticated: !!session,
+                    isLoading: false,
+                }),
+            setLoading: (loading) =>
+                set({
+                    isLoading: loading,
                 }),
         }),
         {
             name: "fitgym-auth",
+            // No persistir isLoading - siempre debe empezar en true
+            partialize: (state) => ({
+                isAuthenticated: state.isAuthenticated,
+                user: state.user,
+                session: state.session,
+            }),
         }
     )
 );

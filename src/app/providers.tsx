@@ -19,16 +19,20 @@ const queryClient = new QueryClient({
 
 export function Providers({ children }: { children: ReactNode }) {
   const setSession = useAuthStore((state) => state.setSession);
+  const setLoading = useAuthStore((state) => state.setLoading);
 
   useEffect(() => {
     // Obtener sesión inicial
     (async () => {
       try {
+        setLoading(true);
         const { data } = await supabase.auth.getSession();
         setSession(data.session ?? null);
       } catch (e) {
         console.warn("Fallo obteniendo la sesión de Supabase", e);
         setSession(null);
+      } finally {
+        setLoading(false);
       }
     })();
 
@@ -44,7 +48,7 @@ export function Providers({ children }: { children: ReactNode }) {
         console.warn("Error anulando la suscripción de cambios de auth", e);
       }
     };
-  }, [setSession]);
+  }, [setSession, setLoading]);
 
   return (
     <QueryClientProvider client={queryClient}>

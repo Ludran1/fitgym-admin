@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import { authenticatedFetch } from '@/lib/fetch-utils';
 
 export interface Cliente {
     id: string;
@@ -29,7 +30,7 @@ export const clientesKeys = {
 
 // Fetch clientes
 async function fetchClientes(): Promise<Cliente[]> {
-    const response = await fetch('/api/clientes');
+    const response = await authenticatedFetch('/api/clientes');
     if (!response.ok) {
         throw new Error('Error al cargar clientes');
     }
@@ -38,7 +39,7 @@ async function fetchClientes(): Promise<Cliente[]> {
 
 // Fetch cliente por ID
 async function fetchClienteById(id: string): Promise<Cliente> {
-    const response = await fetch(`/api/clientes/${id}`);
+    const response = await authenticatedFetch(`/api/clientes/${id}`);
     if (!response.ok) {
         throw new Error('Cliente no encontrado');
     }
@@ -47,7 +48,7 @@ async function fetchClienteById(id: string): Promise<Cliente> {
 
 // Validar DNI
 async function validarDni(dni: string): Promise<{ existe: boolean; cliente: Cliente | null }> {
-    const response = await fetch(`/api/clientes/validar-dni?dni=${dni}`);
+    const response = await authenticatedFetch(`/api/clientes/validar-dni?dni=${dni}`);
     if (!response.ok) {
         throw new Error('Error al validar DNI');
     }
@@ -56,7 +57,7 @@ async function validarDni(dni: string): Promise<{ existe: boolean; cliente: Clie
 
 // Fetch clientes por vencer
 async function fetchClientesExpiring(days: number = 7): Promise<Cliente[]> {
-    const response = await fetch(`/api/clientes/expiring?days=${days}`);
+    const response = await authenticatedFetch(`/api/clientes/expiring?days=${days}`);
     if (!response.ok) {
         throw new Error('Error al cargar clientes por vencer');
     }

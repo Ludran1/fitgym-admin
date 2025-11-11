@@ -4,12 +4,7 @@ import { getSupabaseToken, validateSupabaseToken, isAdmin } from '@/lib/auth';
 
 export async function middleware(request: NextRequest) {
     try {
-        // Obtener el token de autenticación
-        const token = getSupabaseToken(request);
-
         const isApiRoute = request.nextUrl.pathname.startsWith('/api/');
-        const isAuthRoute = request.nextUrl.pathname.startsWith('/login') ||
-            request.nextUrl.pathname.startsWith('/registro');
         const isPublicFile = request.nextUrl.pathname.startsWith('/_next') ||
             request.nextUrl.pathname.startsWith('/favicon') ||
             request.nextUrl.pathname.match(/\.(svg|png|jpg|jpeg|gif|webp|ico)$/);
@@ -18,6 +13,18 @@ export async function middleware(request: NextRequest) {
         if (isPublicFile) {
             return NextResponse.next();
         }
+
+        // ⚠️ IMPORTANTE: Solo proteger rutas API en el middleware
+        // Las rutas de página ya están protegidas por el layout.tsx del cliente
+        // porque Supabase usa localStorage que no está disponible en el servidor
+
+        if (!isApiRoute) {
+            // Permitir todas las navegaciones de página
+            // El layout protegido del cliente manejará la autenticación
+            return NextResponse.next();
+        }
+
+        // --- SOLO RUTAS API A PARTIR DE AQUÍ ---
 
         // Rutas API públicas (no requieren autenticación)
         const publicApiRoutes = [
@@ -35,63 +42,41 @@ export async function middleware(request: NextRequest) {
             return NextResponse.next();
         }
 
-        // Proteger rutas API (excepto las públicas)
-        if (isApiRoute && !isPublicApiRoute) {
-            if (!token) {
-                return NextResponse.json(
-                    {
-                        error: 'No autenticado',
-                        message: 'Debes iniciar sesión para acceder a este recurso.'
-                    },
-                    { status: 401 }
-                );
-            }
+        // Obtener el token de autenticación para rutas API protegidas
+        const token = getSupabaseToken(request);
 
-            // Validar el token
-            const validation = await validateSupabaseToken(token);
-
-            if (!validation.valid) {
-                return NextResponse.json(
-                    {
-                        error: 'Token inválido',
-                        message: validation.error || 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.'
-                    },
-                    { status: 401 }
-                );
-            }
-
-            // Verificar rol de admin
-            if (!isAdmin(validation.user)) {
-                return NextResponse.json(
-                    {
-                        error: 'Acceso denegado',
-                        message: 'Se requiere rol de administrador para acceder a este recurso.'
-                    },
-                    { status: 403 }
-                );
-            }
+        if (!token) {
+            return NextResponse.json(
+                {
+                    error: 'No autenticado',
+                    message: 'Debes iniciar sesión para acceder a este recurso.'
+                },
+                { status: 401 }
+            );
         }
 
-        // Proteger rutas de página (excepto login, registro, home)
-        const isProtectedRoute = !isAuthRoute &&
-            request.nextUrl.pathname !== '/' &&
-            !isPublicFile;
+        // Validar el token
+        const validation = await validateSupabaseToken(token);
 
-        if (isProtectedRoute && !token) {
-            const loginUrl = new URL('/login', request.url);
-            // Guardar la URL a la que intentaba acceder
-            loginUrl.searchParams.set('redirect', request.nextUrl.pathname);
-            return NextResponse.redirect(loginUrl);
+        if (!validation.valid) {
+            return NextResponse.json(
+                {
+                    error: 'Token inválido',
+                    message: validation.error || 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.'
+                },
+                { status: 401 }
+            );
         }
 
-        // Si el usuario está autenticado y intenta acceder a login/registro, redirigir al dashboard
-        if (token && isAuthRoute) {
-            // Verificar si hay un redirect query param
-            const redirectUrl = request.nextUrl.searchParams.get('redirect');
-            if (redirectUrl && redirectUrl.startsWith('/')) {
-                return NextResponse.redirect(new URL(redirectUrl, request.url));
-            }
-            return NextResponse.redirect(new URL('/', request.url));
+        // Verificar rol de admin
+        if (!isAdmin(validation.user)) {
+            return NextResponse.json(
+                {
+                    error: 'Acceso denegado',
+                    message: 'Se requiere rol de administrador para acceder a este recurso.'
+                },
+                { status: 403 }
+            );
         }
 
         return NextResponse.next();

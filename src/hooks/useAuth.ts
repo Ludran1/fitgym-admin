@@ -1,32 +1,34 @@
 import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 
 /**
- * Hook personalizado para manejar la autenticación
- * Wrapper sobre useAuthStore para mantener compatibilidad con código existente
+ * Hook personalizado para gestionar la autenticación
+ * @returns Objeto con el estado de autenticación y funciones para login/logout
  */
-export function useAuth() {
-    const { isAuthenticated, user, session } = useAuthStore();
+export const useAuth = () => {
+    const router = useRouter();
+    const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+    const isLoading = useAuthStore((state) => state.isLoading);
+    const user = useAuthStore((state) => state.user);
+    const session = useAuthStore((state) => state.session);
     const login = useAuthStore((state) => state.login);
-    const logout = useAuthStore((state) => state.logout);
+    const logoutStore = useAuthStore((state) => state.logout);
+    const updateUser = useAuthStore((state) => state.updateUser);
 
-    // Función de logout mejorada que llama a Supabase
-    const handleLogout = async () => {
-        try {
-            await supabase.auth.signOut();
-            logout();
-        } catch (error) {
-            console.error("Error en logout:", error);
-            // Aún así limpiamos el estado local
-            logout();
-        }
+    const logout = async () => {
+        await supabase.auth.signOut();
+        logoutStore();
+        router.replace("/login");
     };
 
     return {
         isAuthenticated,
+        isLoading,
         user,
         session,
         login,
-        logout: handleLogout,
+        logout,
+        updateUser,
     };
-}
+};

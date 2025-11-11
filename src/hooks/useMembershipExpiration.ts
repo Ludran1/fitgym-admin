@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { authenticatedFetch } from '@/lib/fetch-utils';
 
 interface ExpiringMembership {
   id: string;
@@ -20,7 +21,7 @@ export const useMembershipExpiration = () => {
   const fetchExpiringMemberships = async (daysAhead: number = 7) => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/clientes/expiring?days=${daysAhead}`);
+      const response = await authenticatedFetch(`/api/clientes/expiring?days=${daysAhead}`);
 
       if (!response.ok) {
         throw new Error('Error al cargar membresías próximas a vencer');
@@ -43,7 +44,7 @@ export const useMembershipExpiration = () => {
   // Obtener días restantes de una membresía específica
   const getDaysRemaining = async (clientId: string): Promise<number | null> => {
     try {
-      const response = await fetch(`/api/clientes/${clientId}`);
+      const response = await authenticatedFetch(`/api/clientes/${clientId}`);
 
       if (!response.ok) {
         throw new Error('Error al obtener cliente');
@@ -68,7 +69,7 @@ export const useMembershipExpiration = () => {
   // Renovar membresía - usa la API de extensión de pago
   const renewMembership = async (clientId: string, newMembresiaId?: string): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/clientes/${clientId}/pago`, {
+      const response = await authenticatedFetch(`/api/clientes/${clientId}/pago`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

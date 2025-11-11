@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Plus, Search, Edit, Trash2, UserCheck } from "lucide-react";
+import { authenticatedFetch } from "@/lib/fetch-utils";
 
 interface RutinaTemplate {
     id: string;
@@ -90,7 +91,7 @@ export default function RutinaPage() {
         try {
             if (!newNombre.trim()) return;
             setSavingTemplate(true);
-            const res = await fetch("/api/rutina-templates", {
+            const res = await authenticatedFetch("/api/rutina-templates", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ nombre: newNombre.trim(), descripcion: newDescripcion.trim() || null }),

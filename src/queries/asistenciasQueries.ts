@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import { authenticatedFetch } from '@/lib/fetch-utils';
 
 export interface AsistenciaConCliente {
     id: string;
@@ -39,7 +40,7 @@ async function fetchAsistencias(filters: { limit?: number; fecha?: string } = {}
     if (filters.limit) params.append('limit', filters.limit.toString());
     if (filters.fecha) params.append('fecha', filters.fecha);
 
-    const response = await fetch(`/api/asistencias?${params.toString()}`);
+    const response = await authenticatedFetch(`/api/asistencias?${params.toString()}`);
     if (!response.ok) {
         throw new Error('Error al cargar asistencias');
     }
@@ -48,7 +49,7 @@ async function fetchAsistencias(filters: { limit?: number; fecha?: string } = {}
 
 // Registrar asistencia
 async function registrarAsistencia(data: RegistrarAsistenciaData): Promise<AsistenciaConCliente> {
-    const response = await fetch('/api/asistencias', {
+    const response = await authenticatedFetch('/api/asistencias', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),

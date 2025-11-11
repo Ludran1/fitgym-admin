@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useMembresias } from "@/hooks/useMembresias";
+import { authenticatedFetch } from "@/lib/fetch-utils";
 import type { clientes, EstadoCliente } from "@prisma/client";
 
 // Tipos para los datos del formulario
@@ -33,7 +34,7 @@ export const useClientes = () => {
   const fetchClientes = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/clientes');
+      const response = await authenticatedFetch('/api/clientes');
 
       if (!response.ok) {
         throw new Error('Error al cargar clientes');
@@ -80,7 +81,7 @@ export const useClientes = () => {
     if (!clienteToDelete) return;
 
     try {
-      const response = await fetch(`/api/clientes/${clienteToDelete}`, {
+      const response = await authenticatedFetch(`/api/clientes/${clienteToDelete}`, {
         method: 'DELETE',
       });
 
@@ -111,7 +112,7 @@ export const useClientes = () => {
       const method = clienteActual ? 'PUT' : 'POST';
       const url = clienteActual ? `/api/clientes/${clienteActual.id}` : '/api/clientes';
 
-      const response = await fetch(url, {
+      const response = await authenticatedFetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',

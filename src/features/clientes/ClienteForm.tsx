@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { authenticatedFetch } from "@/lib/fetch-utils";
 import {
   Dialog,
   DialogClose,
@@ -133,7 +134,7 @@ export function ClienteForm({
       if (onPhotoUpload) {
         publicUrl = await onPhotoUpload(clientId, photoFile);
         // Actualizar con Prisma API
-        await fetch(`/api/clientes/${clientId}`, {
+        await authenticatedFetch(`/api/clientes/${clientId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ avatar_url: publicUrl }),
@@ -151,7 +152,7 @@ export function ClienteForm({
         publicUrl = pub.publicUrl;
 
         // Actualizar con Prisma API en lugar de Supabase directamente
-        const response = await fetch(`/api/clientes/${clientId}`, {
+        const response = await authenticatedFetch(`/api/clientes/${clientId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ avatar_url: publicUrl }),
@@ -313,7 +314,7 @@ export function ClienteForm({
             return
           }
         } else {
-          const resp = await fetch('/api/clientes/validar-dni', {
+          const resp = await authenticatedFetch('/api/clientes/validar-dni', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ dni, excludeId: clienteActual?.id ?? null })
