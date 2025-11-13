@@ -93,8 +93,6 @@ model clientes {
     fecha_nacimiento  DateTime      @db.Date
     fecha_registro    DateTime      @default(now()) @db.Timestamptz(6)
     membresia_id      String?       @db.Uuid
-    nombre_membresia  String?       @db.VarChar(255)
-    tipo_membresia    String?       @db.VarChar(50)
     fecha_inicio      DateTime?     @db.Timestamptz(6)
     fecha_fin         DateTime?     @db.Timestamptz(6)
     estado            EstadoCliente @default(activa)
