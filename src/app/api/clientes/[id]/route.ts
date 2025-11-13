@@ -142,7 +142,7 @@ export async function DELETE(
             if (cliente.email) {
                 try {
                     const { data: authData } = await supabaseAdmin.auth.admin.listUsers();
-                    const userToDelete = authData?.users?.find(u => u.email === cliente.email);
+                    const userToDelete = authData?.users?.find((u: any) => u.email === cliente.email);
                     if (userToDelete) {
                         await supabaseAdmin.auth.admin.deleteUser(userToDelete.id);
                         console.log(`Usuario en Auth eliminado: ${userToDelete.id}`);
