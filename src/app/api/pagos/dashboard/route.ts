@@ -32,7 +32,6 @@ export async function GET() {
                 nombre: true,
                 avatar_url: true,
                 fecha_fin: true,
-                nombre_membresia: true,
                 membresias: {
                     select: {
                         nombre: true,
@@ -61,7 +60,6 @@ export async function GET() {
                 nombre: true,
                 avatar_url: true,
                 fecha_fin: true,
-                nombre_membresia: true,
                 membresias: {
                     select: {
                         nombre: true,
@@ -86,7 +84,6 @@ export async function GET() {
                 nombre: true,
                 avatar_url: true,
                 fecha_fin: true,
-                nombre_membresia: true,
                 membresias: {
                     select: {
                         nombre: true,
@@ -105,7 +102,7 @@ export async function GET() {
             nombre: c.nombre,
             avatar_url: c.avatar_url,
             fecha_fin: c.fecha_fin,
-            nombre_membresia: c.nombre_membresia ?? c.membresias?.nombre ?? null,
+            nombre_membresia: c.membresias?.nombre ?? null,
         });
 
         return NextResponse.json({
