@@ -66,12 +66,17 @@ async function fetchClientesExpiring(days: number = 7): Promise<Cliente[]> {
 
 // Hook: useClientes
 export function useClientesQuery() {
-    return useQuery({
+    return useQuery<Cliente[], Error>({
         queryKey: clientesKeys.lists(),
         queryFn: fetchClientes,
         // Mantener en cache 15 minutos y refrescar en background cada 15 minutos
         staleTime: 15 * 60 * 1000, // 15 minutos
+        // cacheTime (opcional) intentionally omitted to avoid TypeScript overload issues
         refetchInterval: 15 * 60 * 1000, // refetch automático cada 15 minutos
+        // Evitar re-fetch automático al volver al foco (al cambiar de pestaña)
+        refetchOnWindowFocus: false,
+        // Evitar re-fetch al montar si los datos están frescos
+        refetchOnMount: false,
     });
 }
 

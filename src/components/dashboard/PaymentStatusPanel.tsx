@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, CheckCircle, XCircle, RefreshCw } from "lucide-react";
 import { authenticatedGet, authenticatedPost } from "@/lib/fetch-utils";
+import { AvatarImage } from "@radix-ui/react-avatar";
 
 interface ClienteItem {
   id: string;
@@ -41,16 +42,6 @@ export function PaymentStatusPanel() {
       setError(e?.message || "Error desconocido");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const registrarPago = async (clienteId: string) => {
-    try {
-      await authenticatedPost(`/api/clientes/${clienteId}/pago`, {});
-      await fetchData();
-    } catch (e) {
-      console.error(e);
-      alert("Error registrando pago");
     }
   };
 
@@ -101,6 +92,7 @@ export function PaymentStatusPanel() {
                 >
                   <div className="flex items-center space-x-3">
                     <Avatar className="h-8 w-8">
+                      <AvatarImage src={c.avatar_url || undefined} />
                       <AvatarFallback className="text-xs">{initials}</AvatarFallback>
                     </Avatar>
                     <div>

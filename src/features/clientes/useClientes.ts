@@ -1,5 +1,6 @@
 // Nueva versión con Prisma
 import { useState, useEffect } from "react";
+import { clientesKeys } from '@/queries/clientesQueries';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from "@/hooks/use-toast";
 import { useMembresias } from "@/hooks/useMembresias";
@@ -35,7 +36,9 @@ export const useClientes = () => {
   // Cargar clientes desde la API (Prisma en el backend)
   const fetchClientes = async () => {
     try {
-      setLoading(true);
+      // Si ya tenemos datos en cache, no mostrar el spinner inicial
+      const cached = queryClient.getQueryData(clientesKeys.lists()) as clientes[] | undefined;
+      if (!cached) setLoading(true);
       const response = await authenticatedFetch('/api/clientes');
 
       if (!response.ok) {
@@ -44,6 +47,8 @@ export const useClientes = () => {
 
       const data = await response.json();
       setClientes(data);
+      // Escribir en cache para que otros consumidores lo vean inmediatamente
+      queryClient.setQueryData(clientesKeys.lists(), data);
     } catch (err) {
       console.error('Error al cargar clientes:', err);
       toast({
@@ -58,7 +63,16 @@ export const useClientes = () => {
 
   // Cargar datos al montar el componente
   useEffect(() => {
-    fetchClientes();
+    // Inicializar desde cache si existe para evitar parpadeo al cambiar de ruta
+    const cached = queryClient.getQueryData(clientesKeys.lists()) as clientes[] | undefined;
+    if (cached && cached.length > 0) {
+      setClientes(cached);
+      setLoading(false);
+      // De todos modos lanzar un refetch en background si la cache está stale
+      fetchClientes().catch(() => { });
+    } else {
+      fetchClientes();
+    }
   }, []);
 
   const filteredClientes = clientes.filter(
