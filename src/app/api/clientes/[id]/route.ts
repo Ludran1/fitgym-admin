@@ -62,7 +62,15 @@ export async function PUT(
         if (body.fecha_nacimiento !== undefined) {
             updateData.fecha_nacimiento = body.fecha_nacimiento ? new Date(body.fecha_nacimiento) : null;
         }
-        if (body.membresia_id !== undefined) updateData.membresia_id = body.membresia_id || null;
+        if (body.membresia_id !== undefined) {
+            if (body.membresia_id) {
+                // Conectar la membresía al cliente
+                updateData.membresias = { connect: { id: body.membresia_id } };
+            } else {
+                // Desconectar la membresía (establecer a null)
+                updateData.membresias = { disconnect: true };
+            }
+        }
         if (body.nombre_membresia !== undefined) updateData.nombre_membresia = body.nombre_membresia || null;
         if (body.tipo_membresia !== undefined) updateData.tipo_membresia = body.tipo_membresia || null;
         if (body.fecha_inicio !== undefined) {

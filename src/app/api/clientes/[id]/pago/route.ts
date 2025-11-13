@@ -59,8 +59,6 @@ export async function POST(
                 fecha_inicio: nuevaFechaInicio,
                 fecha_fin: nuevaFechaFin,
                 estado: 'activa',
-                nombre_membresia: membresia.nombre || null,
-                tipo_membresia: membresia.tipo || null,
             },
         });
 

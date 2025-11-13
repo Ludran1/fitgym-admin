@@ -55,20 +55,25 @@ export async function POST(request: Request) {
     try {
         const body = await request.json();
 
+        // Construir data para create usando relación anidada para membresía
+        const createData: any = {
+            nombre: body.nombre,
+            email: body.email,
+            telefono: body.telefono,
+            dni: body.dni || null,
+            fecha_nacimiento: body.fecha_nacimiento ? new Date(body.fecha_nacimiento) : null,
+            fecha_inicio: body.fecha_inicio ? new Date(body.fecha_inicio) : null,
+            fecha_fin: body.fecha_fin ? new Date(body.fecha_fin) : null,
+            estado: (body.estado as EstadoCliente) || 'activa',
+        };
+
+        if (body.membresia_id) {
+            // Conectar relación si se envía un id de membresía
+            createData.membresias = { connect: { id: body.membresia_id } };
+        }
+
         const cliente = await prisma.clientes.create({
-            data: {
-                nombre: body.nombre,
-                email: body.email,
-                telefono: body.telefono,
-                dni: body.dni || null,
-                fecha_nacimiento: new Date(body.fecha_nacimiento),
-                membresia_id: body.membresia_id || null,
-                nombre_membresia: body.nombre_membresia || null,
-                tipo_membresia: body.tipo_membresia || null,
-                fecha_inicio: body.fecha_inicio ? new Date(body.fecha_inicio) : null,
-                fecha_fin: body.fecha_fin ? new Date(body.fecha_fin) : null,
-                estado: (body.estado as EstadoCliente) || 'activa',
-            },
+            data: createData,
             include: {
                 membresias: {
                     select: {
