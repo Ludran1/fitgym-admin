@@ -5,6 +5,22 @@ import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { z } from 'zod';
 
+// Helper para obtener la URL base correcta
+function getBaseUrl() {
+    // En producción, usar VERCEL_URL o NEXT_PUBLIC_SITE_URL
+    if (process.env.NEXT_PUBLIC_SITE_URL) {
+        return process.env.NEXT_PUBLIC_SITE_URL;
+    }
+    
+    // En Vercel, usar VERCEL_URL
+    if (process.env.VERCEL_URL) {
+        return `https://${process.env.VERCEL_URL}`;
+    }
+    
+    // Fallback a localhost
+    return 'http://localhost:3000';
+}
+
 // Schemas de validación
 const loginSchema = z.object({
     email: z.string().email('Email inválido'),
@@ -117,8 +133,9 @@ export async function logout(): Promise<AuthResult> {
  */
 export async function checkAdminExists(): Promise<boolean> {
     try {
+        const baseUrl = getBaseUrl();
         const response = await fetch(
-            `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/auth/verificar-admin`,
+            `${baseUrl}/api/auth/verificar-admin`,
             { cache: 'no-store' }
         );
         const data = await response.json();
@@ -154,8 +171,9 @@ export async function signup(formData: FormData): Promise<AuthResult> {
         }
 
         // Usar el API endpoint que auto-confirma el email
+        const baseUrl = getBaseUrl();
         const response = await fetch(
-            `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/auth/registrar-primer-admin`,
+            `${baseUrl}/api/auth/registrar-primer-admin`,
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
