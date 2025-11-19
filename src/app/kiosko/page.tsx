@@ -1,353 +1,125 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { Camera } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { QRScannerArea } from "@/components/kiosko/QRScannerArea";
+import { AccessOverlay } from "@/components/kiosko/AccessOverlay";
+import { SerialPortControl } from "@/components/kiosko/SerialPortControl";
+import { useSerialPort } from "@/hooks/useSerialPort";
+import { useAccessControl } from "@/hooks/useAccessControl";
+import { useQRScanner } from "@/hooks/useQRScanner";
+import { useAttendanceRegistration } from "@/hooks/useAttendanceRegistration";
+import type { OverlayState, ClienteConMembresia } from "@/types/kiosko.types";
 
-import { useToast } from "@/hooks/use-toast";
-import { Scanner } from "@yudiel/react-qr-scanner";
-import { supabase } from "@/lib/supabase";
-import type { Database } from "@/lib/supabase";
-import { Camera, CheckCircle2, User2, IdCard, Star, CalendarRange, XCircle, AlertTriangle } from "lucide-react";
-
-export default function Kiosko() {
-  const { toast } = useToast();
-  const [scanActive] = useState(true);
+export default function KioskoPage() {
   const [horaActual, setHoraActual] = useState<string>("");
-  const [puertaEstado, setPuertaEstado] = useState<"desconectada" | "conectada" | "abriendo" | "error">("desconectada");
-  const [serialDisponible, setSerialDisponible] = useState(false);
+  const [overlayState, setOverlayState] = useState<OverlayState>({
+    visible: false,
+    kind: null,
+    deniedReason: null,
+    cliente: null,
+    codigoQR: "",
+    hora: "",
+  });
 
-  const [ultimoCliente, setUltimoCliente] = useState<Database["public"]["Tables"]["clientes"]["Row"] | null>(null);
-  const [ultimaHora, setUltimaHora] = useState<string>("");
-  const [ultimoCodigoQR, setUltimoCodigoQR] = useState<string>("");
-  const [overlayVisible, setOverlayVisible] = useState<boolean>(false);
-  const [overlayKind, setOverlayKind] = useState<"granted" | "denied" | null>(null);
-  const [overlayDeniedReason, setOverlayDeniedReason] = useState<"unknown" | "expired" | "suspended" | null>(null);
-  const lastCodeRef = useRef<string>("");
-  const lastTimeRef = useRef<number>(0);
-  const overlayTimerRef = useRef<number | null>(null);
-  const scannerAreaRef = useRef<HTMLDivElement | null>(null);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const serialPortRef = useRef<any>(null);
-  const writerRef = useRef<WritableStreamDefaultWriter<Uint8Array> | null>(null);
-  const encoderRef = useRef(new TextEncoder());
+  // Hooks personalizados
+  const serialPort = useSerialPort();
+  const accessControl = useAccessControl();
+  const qrScanner = useQRScanner();
+  const attendance = useAttendanceRegistration();
 
-  const playAccessSound = async () => {
-    try {
-      if (!audioCtxRef.current) {
-        const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
-        audioCtxRef.current = AC ? new AC() : null;
-      }
-      const ctx = audioCtxRef.current;
-      if (!ctx) return;
-      if (ctx.state === "suspended") {
-        try { await ctx.resume(); } catch { }
-      }
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(440, ctx.currentTime); // tono bajo
-      gain.gain.setValueAtTime(0, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.06, ctx.currentTime + 0.02); // volumen suave
-      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.25);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.26);
-    } catch {
-      // Silenciar cualquier error de audio para no interrumpir el flujo del kiosko
-    }
-  };
-
-  // Determina si la membresía está vencida por fecha_fin
-  const estaVencidaPorFecha = (fin?: string | null) => {
-    if (!fin) return false;
-    const ahora = new Date();
-    const finDate = new Date(fin);
-    // Considera vigente hasta el final del día local de fecha_fin
-    finDate.setHours(23, 59, 59, 999);
-    return ahora.getTime() > finDate.getTime();
-  };
-
-  const registrarAsistencia = async (
-    cliente: any,
-    esDiario?: boolean
-  ) => {
-    const vencidaPorFecha = estaVencidaPorFecha(cliente.fecha_fin);
-    const suspendida = cliente.estado === "suspendida";
-    const vencidaEstado = cliente.estado === "vencida";
-
-    if (vencidaPorFecha || suspendida || vencidaEstado) {
-      // Mostrar overlay de acceso denegado
-      setUltimoCliente(cliente);
-      setOverlayKind("denied");
-      setOverlayDeniedReason(vencidaPorFecha || vencidaEstado ? "expired" : "suspended");
-      setOverlayVisible(true);
-      if (overlayTimerRef.current) {
-        clearTimeout(overlayTimerRef.current);
-        overlayTimerRef.current = null;
-      }
-      overlayTimerRef.current = window.setTimeout(() => {
-        setOverlayVisible(false);
-        setOverlayKind(null);
-        setOverlayDeniedReason(null);
-        setUltimoCliente(null);
-        setUltimoCodigoQR("");
-      }, 5000);
-      return;
-    }
-
-    try {
-      // Usar el mismo endpoint que RegistroAsistenciaCard
-      const response = await fetch("/api/asistencias", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          cliente_id: cliente.id,
-          notas: "qr",
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        // Si ya registró hoy pero es diario, permitir acceso
-        if (data.error?.includes("ya registró su asistencia hoy") && esDiario) {
-          const hora = new Date().toTimeString().split(" ")[0];
-          setUltimoCliente(cliente);
-          setUltimaHora(hora);
-
-          // Mostrar overlay de acceso concedido
-          setOverlayKind("granted");
-          setOverlayVisible(true);
-          if (overlayTimerRef.current) {
-            clearTimeout(overlayTimerRef.current);
-            overlayTimerRef.current = null;
-          }
-          overlayTimerRef.current = window.setTimeout(() => {
-            setOverlayVisible(false);
-            setOverlayKind(null);
-            setOverlayDeniedReason(null);
-            setUltimoCliente(null);
-            setUltimoCodigoQR("");
-          }, 5000);
-          playAccessSound();
-          abrirCerradura();
-          return;
-        }
-
-        throw new Error(data.error || "Error al registrar asistencia");
-      }
-
-      const hora = new Date(data.fecha_asistencia).toTimeString().split(" ")[0];
-      setUltimoCliente(cliente);
-      setUltimaHora(hora);
-
-      // Mostrar overlay de acceso concedido
-      setOverlayKind("granted");
-      setOverlayVisible(true);
-      if (overlayTimerRef.current) {
-        clearTimeout(overlayTimerRef.current);
-        overlayTimerRef.current = null;
-      }
-      overlayTimerRef.current = window.setTimeout(() => {
-        setOverlayVisible(false);
-        setOverlayKind(null);
-        setOverlayDeniedReason(null);
-        setUltimoCliente(null);
-        setUltimoCodigoQR("");
-      }, 5000);
-
-      playAccessSound();
-      abrirCerradura();
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error al registrar",
-        description: error.message
-      });
-    }
-  };
-
-  const conectarCerradura = async () => {
-    if (!serialDisponible) {
-      toast({ variant: "destructive", title: "Serial no disponible", description: "Usa Chrome/Edge" });
-      return;
-    }
-    try {
-      const port = await (navigator as any).serial.requestPort({ filters: [] });
-      await port.open({ baudRate: 9600 });
-      serialPortRef.current = port;
-      const writer = port.writable?.getWriter();
-      writerRef.current = writer || null;
-      setPuertaEstado("conectada");
-      toast({ title: "Puerta conectada", description: "Listo para abrir" });
-    } catch (e: any) {
-      setPuertaEstado("error");
-      toast({ variant: "destructive", title: "Error conectando", description: String(e?.message || e) });
-    }
-  };
-
-  const abrirCerradura = async (ms: number = 2000) => {
-    try {
-      if (!writerRef.current) return;
-      setPuertaEstado("abriendo");
-      await writerRef.current.write(encoderRef.current.encode("O"));
-      window.setTimeout(async () => {
-        try {
-          if (writerRef.current) {
-            await writerRef.current.write(encoderRef.current.encode("C"));
-          }
-          setPuertaEstado("conectada");
-        } catch {
-          setPuertaEstado("error");
-        }
-      }, ms);
-    } catch {
-      setPuertaEstado("error");
-    }
-  };
-
+  // Actualizar hora cada segundo
   useEffect(() => {
-    return () => {
-      try {
-        writerRef.current?.releaseLock();
-        serialPortRef.current?.close?.();
-      } catch { }
-    };
-  }, []);
-
-  const registrarPorQR = async (valor: string) => {
-    if (!valor) {
-      toast({ variant: "destructive", title: "Código inválido", description: "Intenta nuevamente." });
-      return;
-    }
-
-    // Anti-doble lectura en ráfaga
-    const now = Date.now();
-    if (lastCodeRef.current === valor && now - lastTimeRef.current < 5000) {
-      return; // Ignora duplicado dentro de 5 segundos
-    }
-    lastCodeRef.current = valor;
-    lastTimeRef.current = now;
-
-    let cliente: any = null;
-
-    try {
-      // Usar la misma lógica que RegistroAsistenciaCard
-      if (valor.startsWith("CLIENT:")) {
-        const id = valor.slice(7);
-        const response = await fetch(`/api/clientes/${id}`);
-
-        if (response.ok) {
-          cliente = await response.json();
-        }
-      } else {
-        // Buscar por código de tarjeta de acceso
-        const { data: tarjeta } = await supabase
-          .from("tarjetas_acceso")
-          .select(`
-            codigo,
-            clientes (
-              id, 
-              nombre, 
-              dni, 
-              estado, 
-              avatar_url, 
-              fecha_fin, 
-              membresia_id,
-              membresias (
-                nombre,
-                modalidad
-              )
-            )
-          `)
-          .eq("codigo", valor)
-          .maybeSingle();
-
-        if (tarjeta?.clientes) {
-          const clienteData = Array.isArray(tarjeta.clientes) ? tarjeta.clientes[0] : tarjeta.clientes;
-          cliente = clienteData;
-        }
-      }
-
-      if (!cliente) {
-        // Mostrar overlay de acceso denegado por usuario no registrado
-        setOverlayKind("denied");
-        setOverlayDeniedReason("unknown");
-        setUltimoCliente(null);
-        setOverlayVisible(true);
-        if (overlayTimerRef.current) {
-          clearTimeout(overlayTimerRef.current);
-          overlayTimerRef.current = null;
-        }
-        overlayTimerRef.current = window.setTimeout(() => {
-          setOverlayVisible(false);
-          setOverlayKind(null);
-          setOverlayDeniedReason(null);
-        }, 5000);
-        return;
-      }
-
-      // Extraer info de membresía
-      let esDiario = false;
-      let nombreMembresia: string | null = null;
-      let modalidadMembresia: string | null = null;
-
-      if (cliente.membresias) {
-        const membresia = Array.isArray(cliente.membresias) ? cliente.membresias[0] : cliente.membresias;
-        if (membresia) {
-          nombreMembresia = membresia.nombre;
-          modalidadMembresia = membresia.modalidad;
-          esDiario = membresia.modalidad === "diario";
-        }
-      }
-
-      // Enriquecer cliente
-      const clienteConMembresia = {
-        ...cliente,
-        nombre_membresia: nombreMembresia,
-        tipo_membresia: modalidadMembresia,
-      };
-
-      setUltimoCodigoQR(valor);
-      await registrarAsistencia(clienteConMembresia, esDiario);
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error buscando cliente",
-        description: error.message
-      });
-    }
-  };
-
-  // Utilidad para formatear fecha YYYY-MM-DD
-  const formatoFecha = (iso?: string | null) => {
-    if (!iso) return "-";
-    try {
-      const d = new Date(iso);
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      return `${y}-${m}-${day}`;
-    } catch {
-      return String(iso);
-    }
-  };
-
-  useEffect(() => {
-    // Inicializar la hora inmediatamente en el cliente
     setHoraActual(new Date().toLocaleTimeString());
-    
-    // Verificar disponibilidad de Serial API
-    setSerialDisponible(typeof (navigator as any).serial !== "undefined");
-    
-    const id = window.setInterval(() => {
+
+    const intervalId = setInterval(() => {
       setHoraActual(new Date().toLocaleTimeString());
     }, 1000);
-    return () => {
-      clearInterval(id);
-    };
-  }, []);  return (
+
+    return () => clearInterval(intervalId);
+  }, []);
+
+  // Ocultar overlay después de 5 segundos
+  useEffect(() => {
+    if (!overlayState.visible) return;
+
+    const timeoutId = setTimeout(() => {
+      setOverlayState({
+        visible: false,
+        kind: null,
+        deniedReason: null,
+        cliente: null,
+        codigoQR: "",
+        hora: "",
+      });
+    }, 5000);
+
+    return () => clearTimeout(timeoutId);
+  }, [overlayState.visible]);
+
+  const handleAccessGranted = async (cliente: ClienteConMembresia, codigoQR: string) => {
+    // Reproducir sonido de acceso
+    await attendance.playAccessSound();
+    
+    // Abrir cerradura si está conectada
+    await serialPort.abrir();
+
+    // Mostrar overlay de acceso concedido
+    setOverlayState({
+      visible: true,
+      kind: "granted",
+      deniedReason: null,
+      cliente,
+      codigoQR,
+      hora: new Date().toTimeString().split(" ")[0],
+    });
+  };
+
+  const handleAccessDenied = (
+    cliente: ClienteConMembresia | null,
+    codigoQR: string,
+    reason: "unknown" | "expired" | "suspended"
+  ) => {
+    setOverlayState({
+      visible: true,
+      kind: "denied",
+      deniedReason: reason,
+      cliente,
+      codigoQR,
+      hora: "",
+    });
+  };
+
+  const handleScan = async (codigo: string) => {
+    // Buscar cliente por código
+    const cliente = await qrScanner.procesarCodigo(codigo);
+
+    if (!cliente) {
+      // Cliente no encontrado
+      handleAccessDenied(null, codigo, "unknown");
+      return;
+    }
+
+    // Validar acceso del cliente
+    const validation = accessControl.validarAcceso(cliente);
+
+    if (!validation.allowed) {
+      // Acceso denegado
+      handleAccessDenied(cliente, codigo, validation.reason!);
+      return;
+    }
+
+    // Registrar asistencia
+    const result = await attendance.registrarAsistencia(cliente, validation.isDailyPass);
+
+    if (result.success) {
+      // Acceso concedido
+      handleAccessGranted(cliente, codigo);
+    }
+  };
+
+  return (
     <div className="min-h-screen w-full bg-neutral-950 text-white flex flex-col items-center p-6">
       {/* Hora en la esquina superior derecha */}
       <div className="fixed top-4 right-6 z-30">
@@ -355,6 +127,8 @@ export default function Kiosko() {
           {horaActual || "--:--:--"}
         </span>
       </div>
+
+      {/* Header */}
       <div className="flex flex-col items-center mb-6">
         <div className="h-12 w-12 rounded-full bg-orange-500/10 border border-orange-500/40 flex items-center justify-center mb-2">
           <Camera className="h-6 w-6 text-orange-400" />
@@ -363,206 +137,30 @@ export default function Kiosko() {
         <p className="text-sm text-muted-foreground">Escanea tu código QR para acceder</p>
       </div>
 
+      {/* Card principal */}
       <Card className="bg-neutral-900 border-neutral-800 w-full max-w-2xl">
         <CardContent className="pt-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="text-xs text-neutral-300">Puerta: {serialDisponible ? puertaEstado : "no soportado"}</div>
-            {serialDisponible && (
-              <button
-                onClick={conectarCerradura}
-                className="px-3 py-1 text-sm rounded-md border border-neutral-700 bg-neutral-800 hover:bg-neutral-700"
-              >
-                Conectar puerta
-              </button>
-            )}
+          {/* Control del puerto serial */}
+          <SerialPortControl
+            disponible={serialPort.disponible}
+            estado={serialPort.estado}
+            onConectar={serialPort.conectar}
+          />
+
+          {/* Área del scanner con overlay */}
+          <div className="relative">
+            <QRScannerArea onScan={handleScan} />
+            
+            {/* Overlay de acceso concedido/denegado */}
+            <AccessOverlay
+              visible={overlayState.visible}
+              kind={overlayState.kind}
+              deniedReason={overlayState.deniedReason}
+              cliente={overlayState.cliente}
+              codigoQR={overlayState.codigoQR}
+              hora={overlayState.hora}
+            />
           </div>
-          {scanActive && (
-            <div ref={scannerAreaRef} className="relative rounded-lg overflow-hidden border border-neutral-800">
-              <Scanner
-                onScan={(detectedCodes: any) => {
-                  let value = "";
-                  if (Array.isArray(detectedCodes)) {
-                    const rect = scannerAreaRef.current?.getBoundingClientRect();
-                    if (rect) {
-                      const padX = rect.width * 0.25;
-                      const padY = rect.height * 0.25;
-                      const left = rect.left + padX;
-                      const right = rect.right - padX;
-                      const top = rect.top + padY;
-                      const bottom = rect.bottom - padY;
-                      for (const c of detectedCodes) {
-                        const box = c?.boundingBox;
-                        let cx: number | undefined;
-                        let cy: number | undefined;
-                        if (box && typeof box.x === "number") {
-                          cx = box.x + box.width / 2;
-                          cy = box.y + box.height / 2;
-                        } else if (Array.isArray(c?.cornerPoints) && c.cornerPoints.length) {
-                          const xs = c.cornerPoints.map((p: any) => p.x);
-                          const ys = c.cornerPoints.map((p: any) => p.y);
-                          cx = xs.reduce((a: number, b: number) => a + b, 0) / xs.length;
-                          cy = ys.reduce((a: number, b: number) => a + b, 0) / ys.length;
-                        }
-                        if (cx !== undefined && cy !== undefined) {
-                          if (cx >= left && cx <= right && cy >= top && cy <= bottom) {
-                            value = c?.rawValue || "";
-                            break;
-                          }
-                        }
-                      }
-                    }
-                    if (!value) {
-                      value = detectedCodes[0]?.rawValue || "";
-                    }
-                  }
-                  if (value) registrarPorQR(value);
-                }}
-                onError={(error) => console.error(error)}
-              />
-              {/* Overlay de enfoque */}
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                <div className="h-40 w-40 sm:h-48 sm:w-48 rounded-md border-2 border-orange-500/80 shadow-[0_0_20px_rgba(234,88,12,0.3)] animate-pulse"></div>
-              </div>
-              {/* Overlays encima de la cámara: acceso concedido o denegado */}
-              {overlayVisible && (
-                overlayKind === "granted" && ultimoCliente && ultimoCliente.estado === "activa" && !estaVencidaPorFecha(ultimoCliente.fecha_fin) ? (
-                  <div className="absolute inset-0 z-20 flex items-center justify-center bg-neutral-950/70 backdrop-blur-sm">
-                    <div className="max-w-md w-[92%] rounded-2xl border border-green-700/40 bg-neutral-900/90 p-6 text-center">
-                      <div className="flex flex-col items-center mb-4">
-                        <div className="h-16 w-16 rounded-full bg-green-600/10 border border-green-500/40 flex items-center justify-center mb-2">
-                          <CheckCircle2 className="h-8 w-8 text-green-400" />
-                        </div>
-                        <div className="text-2xl font-bold text-green-400">¡Acceso Concedido!</div>
-                        <div className="text-sm text-neutral-300">Bienvenido al gimnasio</div>
-                      </div>
-
-                      <div className="rounded-xl border border-green-700/30 bg-green-900/10 p-4">
-                        <div className="flex flex-col items-center gap-2">
-                          <div className="h-14 w-14 rounded-full bg-orange-600/20 border border-orange-500/40 flex items-center justify-center">
-                            <User2 className="h-7 w-7 text-orange-400" />
-                          </div>
-                          <div className="text-xl font-bold text-white">{ultimoCliente.nombre}</div>
-                          <div className="text-xs text-green-300">Miembro Verificado</div>
-                        </div>
-
-                        <div className="mt-4 space-y-3 text-left">
-                          <div className="flex items-center gap-3 rounded-lg border border-green-800/40 bg-neutral-800/40 p-3">
-                            <IdCard className="h-5 w-5 text-neutral-300" />
-                            <div className="flex-1">
-                              <div className="text-xs text-neutral-400">ID de Miembro</div>
-                              <div className="text-sm font-medium">{ultimoCodigoQR || ultimoCliente.dni || ultimoCliente.id}</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3 rounded-lg border border-green-800/40 bg-neutral-800/40 p-3">
-                            <Star className="h-5 w-5 text-neutral-300" />
-                            <div className="flex-1">
-                              <div className="text-xs text-neutral-400">Tipo de Membresía</div>
-                              <div className="text-sm font-medium">{ultimoCliente.nombre_membresia || ultimoCliente.tipo_membresia || "-"}</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3 rounded-lg border border-green-800/40 bg-neutral-800/40 p-3">
-                            <CalendarRange className="h-5 w-5 text-neutral-300" />
-                            <div className="flex-1">
-                              <div className="text-xs text-neutral-400">Válida Hasta</div>
-                              <div className="text-sm font-medium">{formatoFecha(ultimoCliente.fecha_fin)}</div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="text-center text-xs text-green-300 mt-3">¡Que tengas un excelente entrenamiento!</div>
-                        <div className="text-center text-xs text-neutral-400">{ultimaHora ? `Registrado a las ${ultimaHora}` : "Registro confirmado"}</div>
-                      </div>
-                    </div>
-                  </div>
-                ) : overlayKind === "denied" ? (
-                  <div className="absolute inset-0 z-20 flex items-center justify-center bg-neutral-950/70 backdrop-blur-sm">
-                    <div className="max-w-md w-[92%] rounded-2xl border border-red-700/40 bg-neutral-900/90 p-6 text-center">
-                      <div className="flex flex-col items-center mb-4">
-                        <div className="h-16 w-16 rounded-full bg-red-600/10 border border-red-500/40 flex items-center justify-center mb-2">
-                          <XCircle className="h-8 w-8 text-red-400" />
-                        </div>
-                        <div className="text-2xl font-bold text-red-400">Acceso Denegado</div>
-                        <div className="text-sm text-neutral-300">
-                          {overlayDeniedReason === "unknown" && "Usuario no registrado"}
-                          {overlayDeniedReason === "expired" && "Membresía vencida"}
-                          {overlayDeniedReason === "suspended" && "Membresía suspendida"}
-                        </div>
-                      </div>
-
-                      {/* Contenido variable según motivo de denegación */}
-                      {overlayDeniedReason === "unknown" ? (
-                        <div className="rounded-xl border border-red-700/30 bg-red-900/10 p-4 text-left">
-                          <div className="flex items-center gap-3 mb-3">
-                            <AlertTriangle className="h-5 w-5 text-red-300" />
-                            <div className="text-base font-semibold">Desconocido</div>
-                          </div>
-                          <div className="text-sm text-neutral-200 font-semibold mb-2">Para acceder al gimnasio:</div>
-                          <ul className="text-sm text-neutral-300 list-disc pl-5 space-y-1">
-                            <li>Dirígete a recepción para registrarte</li>
-                            <li>Verifica que tu código QR sea correcto</li>
-                          </ul>
-                          <div className="text-center text-[11px] text-neutral-400 mt-3">Redirigiendo en 5 segundos...</div>
-                        </div>
-                      ) : (
-                        <div className="rounded-xl border border-red-700/30 bg-red-900/10 p-4 text-left">
-                          <div className="flex flex-col items-center gap-2 mb-3">
-                            <div className="h-14 w-14 rounded-full bg-red-600/20 border border-red-500/40 flex items-center justify-center">
-                              <AlertTriangle className="h-7 w-7 text-red-300" />
-                            </div>
-                            <div className="text-xl font-bold text-white">{ultimoCliente?.nombre}</div>
-                            <div className="text-xs text-red-300">
-                              {overlayDeniedReason === "expired" ? "Membresía Expirada" : "Membresía Suspendida"}
-                            </div>
-                          </div>
-
-                          <div className="space-y-3">
-                            <div className="flex items-center gap-3 rounded-lg border border-red-800/40 bg-neutral-800/40 p-3">
-                              <IdCard className="h-5 w-5 text-neutral-300" />
-                              <div className="flex-1">
-                                <div className="text-xs text-neutral-400">ID de Miembro</div>
-                                <div className="text-sm font-medium">{ultimoCodigoQR || ultimoCliente?.dni || ultimoCliente?.id}</div>
-                              </div>
-                            </div>
-
-                            {overlayDeniedReason === "expired" && (
-                              <div className="flex items-center gap-3 rounded-lg border border-red-800/40 bg-neutral-800/40 p-3">
-                                <CalendarRange className="h-5 w-5 text-neutral-300" />
-                                <div className="flex-1">
-                                  <div className="text-xs text-neutral-400">Fecha de Vencimiento</div>
-                                  <div className="text-sm font-medium">{formatoFecha(ultimoCliente?.fecha_fin)}</div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="mt-4 text-sm text-neutral-200 font-semibold">Para acceder al gimnasio:</div>
-                          <ul className="text-sm text-neutral-300 list-disc pl-5 space-y-1">
-                            {overlayDeniedReason === "expired" ? (
-                              <>
-                                <li>Renueva tu membresía en recepción</li>
-                                <li>O contáctanos para opciones de renovación</li>
-                              </>
-                            ) : (
-                              <>
-                                <li>Consulta en recepción para habilitar tu membresía</li>
-                                <li>Verifica tu estado con el personal</li>
-                              </>
-                            )}
-                          </ul>
-                          <div className="text-center text-[11px] text-neutral-400 mt-3">Redirigiendo en 5 segundos...</div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : null
-              )}
-            </div>
-          )}
-
-          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-          </div>
-
-
         </CardContent>
       </Card>
     </div>
