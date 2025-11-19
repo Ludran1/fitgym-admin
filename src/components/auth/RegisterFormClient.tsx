@@ -37,25 +37,21 @@ export function RegisterFormClient() {
 
                 const result = await signup(formData);
 
+                // signup() hace redirect si es exitoso, nunca llega aquí
+                // Solo llega aquí si hay error
                 if (!result.success) {
                     toast({
                         variant: "destructive",
                         title: AUTH_MESSAGES.REGISTER.ERROR_TITLE,
                         description: result.error || AUTH_MESSAGES.REGISTER.ERROR_DESCRIPTION,
                     });
-                } else {
-                    toast({
-                        title: AUTH_MESSAGES.REGISTER.SUCCESS_TITLE,
-                        description: result.message || AUTH_MESSAGES.REGISTER.SUCCESS_DESCRIPTION,
-                    });
-
-                    // Resetear el formulario
-                    form.reset();
-
-                    // Recargar la página para mostrar el formulario de login
-                    router.refresh();
                 }
             } catch (error: any) {
+                // Capturar NEXT_REDIRECT y dejarlo pasar
+                if (error?.message === 'NEXT_REDIRECT' || error?.digest?.startsWith('NEXT_REDIRECT')) {
+                    throw error;
+                }
+                
                 console.error("Error en registro:", error);
                 toast({
                     variant: "destructive",

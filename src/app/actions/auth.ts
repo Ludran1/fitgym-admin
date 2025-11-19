@@ -142,7 +142,6 @@ export async function signup(formData: FormData): Promise<AuthResult> {
         };
 
         const validatedData = signupSchema.parse(rawData);
-        const supabase = await createServerSupabaseClient();
 
         // Verificar que no haya administradores (solo permitir si es el primer admin)
         const hasAdmin = await checkAdminExists();
@@ -154,35 +153,44 @@ export async function signup(formData: FormData): Promise<AuthResult> {
             };
         }
 
-        // Registrar el usuario con rol de admin
-        const { data, error } = await supabase.auth.signUp({
-            email: validatedData.email,
-            password: validatedData.password,
-            options: {
-                data: {
+        // Usar el API endpoint que auto-confirma el email
+        const response = await fetch(
+            `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/auth/registrar-primer-admin`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: validatedData.email,
+                    password: validatedData.password,
                     nombre: validatedData.nombre,
-                    rol: 'admin',
-                },
-            },
-        });
+                }),
+                cache: 'no-store',
+            }
+        );
 
-        if (error) {
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
             return {
                 success: false,
-                error: error.message,
+                error: data.error || 'Error al crear administrador',
             };
         }
 
-        return {
-            success: true,
-            message: 'Administrador creado exitosamente. Ahora puedes iniciar sesión.',
-        };
+        // Redirigir al login después de crear el admin exitosamente
+        revalidatePath('/', 'layout');
+        redirect('/login');
     } catch (error) {
         if (error instanceof z.ZodError) {
             return {
                 success: false,
                 error: error.errors[0].message,
             };
+        }
+
+        // Si es un redirect, dejarlo pasar
+        if (error instanceof Error && error.message === 'NEXT_REDIRECT') {
+            throw error;
         }
 
         return {
