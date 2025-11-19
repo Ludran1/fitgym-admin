@@ -85,8 +85,6 @@ export interface Database {
                     fecha_nacimiento: string
                     fecha_registro: string
                     membresia_id: string | null
-                    nombre_membresia: string | null
-                    tipo_membresia: string | null
                     fecha_inicio: string | null
                     fecha_fin: string | null
                     estado: 'activa' | 'vencida' | 'suspendida'
