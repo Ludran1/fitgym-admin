@@ -21,28 +21,25 @@ export type ClienteFormData = {
   estado?: EstadoCliente;
 };
 
-export const useClientes = () => {
-  const [clientes, setClientes] = useState<clientes[]>([]);
+export const useClientes = (initialClientes: clientes[] = []) => {
+  const [clientes, setClientes] = useState<clientes[]>(initialClientes);
   const [busqueda, setBusqueda] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [clienteActual, setClienteActual] = useState<clientes | null>(null);
-  const [loading, setLoading] = useState(true);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [clienteToDelete, setClienteToDelete] = useState<string | null>(null);
   const { toast } = useToast();
   const { getMembresiasPorSeleccion } = useMembresias();
   const queryClient = useQueryClient();
 
-  // Cargar clientes desde la API (Prisma en el backend)
+  // Cargar clientes desde la API solo cuando se necesite refrescar
   const fetchClientes = async () => {
     try {
-      // Si ya tenemos datos en cache, no mostrar el spinner inicial
-      const cached = queryClient.getQueryData(clientesKeys.lists()) as clientes[] | undefined;
-      if (!cached) setLoading(true);
       const data = await authenticatedGet<clientes[]>('/api/clientes');
       setClientes(data);
       // Escribir en cache para que otros consumidores lo vean inmediatamente
       queryClient.setQueryData(clientesKeys.lists(), data);
+      return data;
     } catch (err) {
       console.error('Error al cargar clientes:', err);
       toast({
@@ -50,24 +47,16 @@ export const useClientes = () => {
         description: "No se pudieron cargar los clientes",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
+      throw err;
     }
   };
 
-  // Cargar datos al montar el componente
+  // Inicializar cache con datos iniciales del servidor
   useEffect(() => {
-    // Inicializar desde cache si existe para evitar parpadeo al cambiar de ruta
-    const cached = queryClient.getQueryData(clientesKeys.lists()) as clientes[] | undefined;
-    if (cached && cached.length > 0) {
-      setClientes(cached);
-      setLoading(false);
-      // De todos modos lanzar un refetch en background si la cache está stale
-      fetchClientes().catch(() => { });
-    } else {
-      fetchClientes();
+    if (initialClientes.length > 0) {
+      queryClient.setQueryData(clientesKeys.lists(), initialClientes);
     }
-  }, []);
+  }, [initialClientes, queryClient]);
 
   const filteredClientes = clientes.filter(
     (cliente) =>
@@ -196,7 +185,6 @@ export const useClientes = () => {
     isDialogOpen,
     setIsDialogOpen,
     clienteActual,
-    loading,
     handleEdit,
     handleDelete,
     confirmDelete,

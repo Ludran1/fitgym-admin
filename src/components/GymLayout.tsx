@@ -1,9 +1,8 @@
-
 "use client";
 import { useRouter } from 'next/navigation';
 import { SidebarProvider, SidebarTrigger, SidebarRail } from "@/components/ui/sidebar";
 import { GymSidebar } from '@/components/GymSidebar';
-import { Bell, User, Settings, LogOut } from 'lucide-react';
+import { Bell, User as UserIcon, Settings, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -15,14 +14,19 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/hooks/useAuth';
+import { logout } from '@/app/actions/auth';
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import type { User } from '@supabase/supabase-js';
 
-export function GymLayout({ children }: { children: React.ReactNode }) {
+interface GymLayoutProps {
+  children: React.ReactNode;
+  user: User;
+}
+
+export function GymLayout({ children, user }: GymLayoutProps) {
   const router = useRouter();
-  const { logout, user } = useAuth();
 
   // Estado para notificaciones
   const [notificacionesAbiertas, setNotificacionesAbiertas] = useState(false);
@@ -76,9 +80,9 @@ export function GymLayout({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    router.push('/login');
+  const handleLogout = async () => {
+    await logout();
+    // El redirect se maneja en el Server Action
   };
 
   return (
@@ -188,7 +192,7 @@ export function GymLayout({ children }: { children: React.ReactNode }) {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => router.push("/perfil")}>
-                    <User className="mr-2 h-4 w-4" />
+                    <UserIcon className="mr-2 h-4 w-4" />
                     <span>Perfil</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => router.push("/configuracion")}>

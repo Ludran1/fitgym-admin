@@ -1,13 +1,63 @@
-import { useState } from "react";
+"use client";
+
+import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useLoginForm } from "@/hooks/useLoginForm";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { login } from "@/app/actions/auth";
+import { loginFormSchema, type LoginFormValues } from "@/lib/validations/auth-schemas";
+import { AUTH_MESSAGES } from "@/lib/auth-utils";
 
-export function LoginForm() {
-    const { form, isLoading, onSubmit } = useLoginForm();
+export function LoginFormClient() {
     const [showPassword, setShowPassword] = useState(false);
+    const [isPending, startTransition] = useTransition();
+    const { toast } = useToast();
+
+    const form = useForm<LoginFormValues>({
+        resolver: zodResolver(loginFormSchema),
+        defaultValues: {
+            email: "",
+            password: "",
+        },
+    });
+
+    async function onSubmit(values: LoginFormValues) {
+        startTransition(async () => {
+            try {
+                const formData = new FormData();
+                formData.append('email', values.email);
+                formData.append('password', values.password);
+
+                const result = await login(formData);
+
+                // Si result existe y no es exitoso, mostrar error
+                if (result && !result.success) {
+                    toast({
+                        variant: "destructive",
+                        title: AUTH_MESSAGES.LOGIN.ERROR_TITLE,
+                        description: result.error || AUTH_MESSAGES.LOGIN.ERROR_DESCRIPTION,
+                    });
+                }
+                // Si es exitoso, el Server Action hace redirect() y nunca retorna
+            } catch (error: any) {
+                // El redirect() lanza NEXT_REDIRECT que no debemos capturar
+                if (error?.message === 'NEXT_REDIRECT') {
+                    throw error;
+                }
+
+                console.error("Error en login:", error);
+                toast({
+                    variant: "destructive",
+                    title: AUTH_MESSAGES.LOGIN.ERROR_TITLE,
+                    description: error?.message || AUTH_MESSAGES.LOGIN.ERROR_DESCRIPTION,
+                });
+            }
+        });
+    }
 
     return (
         <Form {...form}>
@@ -23,7 +73,7 @@ export function LoginForm() {
                                     placeholder="correo@ejemplo.com"
                                     type="email"
                                     autoComplete="email"
-                                    disabled={isLoading}
+                                    disabled={isPending}
                                     {...field}
                                 />
                             </FormControl>
@@ -43,7 +93,7 @@ export function LoginForm() {
                                         type={showPassword ? "text" : "password"}
                                         placeholder="••••••"
                                         autoComplete="current-password"
-                                        disabled={isLoading}
+                                        disabled={isPending}
                                         {...field}
                                     />
                                     <Button
@@ -68,8 +118,8 @@ export function LoginForm() {
                         </FormItem>
                     )}
                 />
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? "Iniciando sesión..." : "Iniciar sesión"}
+                <Button type="submit" className="w-full" disabled={isPending}>
+                    {isPending ? "Iniciando sesión..." : "Iniciar sesión"}
                 </Button>
             </form>
         </Form>

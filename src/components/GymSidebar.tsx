@@ -2,7 +2,7 @@
 "use client";
 import React from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Dumbbell,
@@ -31,7 +31,6 @@ import {
   SidebarSeparator,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { useAuth } from '@/hooks/useAuth';
 import { Logo } from '@/components/Logo';
 
 type SidebarItem = {
@@ -68,14 +67,7 @@ const sidebarSections: { label: string; items: SidebarItem[] }[] = [
 
 export function GymSidebar() {
   const pathname = usePathname();
-  const router = useRouter();
-  const { logout } = useAuth();
   const { state } = useSidebar();
-
-  const handleLogout = () => {
-    logout();
-    router.push('/login');
-  };
 
   return (
     <Sidebar className="border-r" variant="sidebar" collapsible="icon" data-testid="sidebar">

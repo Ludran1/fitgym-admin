@@ -1,32 +1,31 @@
-"use client";
-
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth";
+import { redirect } from "next/navigation";
+import { getUser } from "@/lib/supabase-server";
 import { GymLayout } from "@/components/GymLayout";
 
-export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
-  const router = useRouter();
+/**
+ * Layout protegido - Server Component
+ * Verifica autenticación en el servidor antes de renderizar
+ * No hay "flash" ni loading states innecesarios
+ */
+export default async function ProtectedLayout({
+  children
+}: {
+  children: React.ReactNode
+}) {
+  // Obtener usuario del servidor
+  const user = await getUser();
 
-  useEffect(() => {
-    // Solo redirigir si ya terminó de cargar y no está autenticado
-    if (!isLoading && !isAuthenticated) {
-      router.replace("/login");
-    }
-  }, [isAuthenticated, isLoading, router]);
-
-  // Mientras carga, mostrar loading
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+  // Si no hay usuario, redirigir a login (server-side)
+  if (!user) {
+    redirect("/login");
   }
 
-  // Si no está autenticado (y ya terminó de cargar), no mostrar nada
-  if (!isAuthenticated) return null;
+  // Verificar que sea admin
+  const role = user.user_metadata?.rol || user.app_metadata?.rol;
+  if (role !== 'admin') {
+    redirect("/login");
+  }
 
-  return <GymLayout>{children}</GymLayout>;
+  // Usuario autenticado y autorizado, renderizar layout
+  return <GymLayout user={user}>{children}</GymLayout>;
 }

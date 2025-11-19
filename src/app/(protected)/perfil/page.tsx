@@ -1,15 +1,20 @@
-"use client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/hooks/useAuth";
+import { getUser } from "@/lib/supabase-server";
+import { redirect } from "next/navigation";
 
-export default function PerfilPage() {
-  const { user } = useAuth();
+export default async function PerfilPage() {
+  const user = await getUser();
+
+  if (!user) {
+    redirect('/login');
+  }
+
   const meta = (user?.user_metadata as any) || {};
   const avatar = meta.avatar_url || meta.picture || "";
-  const nombre = meta.full_name || meta.name || "Usuario";
+  const nombre = meta.full_name || meta.name || meta.nombre || "Usuario";
   const email = user?.email ?? "";
 
   return (
@@ -28,8 +33,8 @@ export default function PerfilPage() {
               <h2 className="text-xl font-semibold">{nombre}</h2>
               <p className="text-muted-foreground">{email}</p>
               <div className="flex items-center gap-2 mt-2">
-                <Badge variant="secondary">Google</Badge>
-                <Badge>Authenticated</Badge>
+                <Badge variant="secondary">Supabase</Badge>
+                <Badge>Admin</Badge>
               </div>
             </div>
           </div>
@@ -48,7 +53,7 @@ export default function PerfilPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Proveedor</p>
-              <p>Google</p>
+              <p>Supabase Auth</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Nombre</p>

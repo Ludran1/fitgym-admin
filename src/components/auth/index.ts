@@ -1,3 +1,3 @@
-export { LoginForm } from "./LoginForm";
-export { RegisterForm } from "./RegisterForm";
+export { LoginFormClient } from "./LoginFormClient";
+export { RegisterFormClient } from "./RegisterFormClient";
 export { LoadingSpinner } from "./LoadingSpinner";

@@ -1,29 +1,20 @@
-"use client";
-
-import { useState } from "react";
+import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAdminVerification } from "@/hooks/useAdminVerification";
-import { useSessionCheck } from "@/hooks/useSessionCheck";
-import { LoginForm } from "@/components/auth/LoginForm";
-import { RegisterForm } from "@/components/auth/RegisterForm";
-import { LoadingSpinner } from "@/components/auth/LoadingSpinner";
+import { checkAdminExists } from "@/app/actions/auth";
+import { getUser } from "@/lib/supabase-server";
 import { AUTH_MESSAGES } from "@/lib/auth-utils";
 import Logo from "@/components/Logo";
+import { LoginFormClient, RegisterFormClient } from "@/components/auth";
 
-export default function LoginPage() {
-  const { existeAdmin, verificandoAdmin } = useAdminVerification();
-  const [adminCreated, setAdminCreated] = useState(false);
+export default async function LoginPage() {
+  // Si ya está autenticado, redirigir al dashboard
+  const user = await getUser();
+  if (user) {
+    redirect('/');
+  }
 
-  // Verificar sesión activa y redirigir si ya está autenticado
-  useSessionCheck();
-
-  // Handler para cuando se crea exitosamente el primer admin
-  const handleRegisterSuccess = () => {
-    setAdminCreated(true);
-  };
-
-  // Determinar qué mostrar basado en el estado
-  const shouldShowLoginForm = existeAdmin || adminCreated;
+  // Verificar si existe un administrador
+  const existeAdmin = await checkAdminExists();
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-black p-4">
@@ -31,27 +22,21 @@ export default function LoginPage() {
         <CardHeader className="space-y-1 flex flex-col items-center">
           <Logo />
           <CardTitle className="text-2xl text-center">
-            {verificandoAdmin
-              ? AUTH_MESSAGES.VERIFICATION.LOADING
-              : shouldShowLoginForm
-                ? AUTH_MESSAGES.VERIFICATION.LOGIN_TITLE
-                : AUTH_MESSAGES.VERIFICATION.REGISTER_TITLE}
+            {existeAdmin
+              ? AUTH_MESSAGES.VERIFICATION.LOGIN_TITLE
+              : AUTH_MESSAGES.VERIFICATION.REGISTER_TITLE}
           </CardTitle>
           <CardDescription className="text-center">
-            {verificandoAdmin
-              ? AUTH_MESSAGES.VERIFICATION.LOADING_DESCRIPTION
-              : shouldShowLoginForm
-                ? AUTH_MESSAGES.VERIFICATION.LOGIN_DESCRIPTION
-                : AUTH_MESSAGES.VERIFICATION.REGISTER_DESCRIPTION}
+            {existeAdmin
+              ? AUTH_MESSAGES.VERIFICATION.LOGIN_DESCRIPTION
+              : AUTH_MESSAGES.VERIFICATION.REGISTER_DESCRIPTION}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {verificandoAdmin ? (
-            <LoadingSpinner />
-          ) : shouldShowLoginForm ? (
-            <LoginForm />
+          {existeAdmin ? (
+            <LoginFormClient />
           ) : (
-            <RegisterForm onSuccess={handleRegisterSuccess} />
+            <RegisterFormClient />
           )}
         </CardContent>
       </Card>
