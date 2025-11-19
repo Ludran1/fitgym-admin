@@ -8,11 +8,21 @@ import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useClientes } from "@/features/clientes/useClientes";
 import type { clientes } from "@prisma/client";
 
-interface ClientesContentProps {
-    initialClientes: clientes[];
+interface MembresiaSerializada {
+    id: string;
+    nombre: string;
+    precio: number;
+    tipo: string;
+    modalidad: string;
+    duracion?: number;
 }
 
-export function ClientesContent({ initialClientes }: ClientesContentProps) {
+interface ClientesContentProps {
+    initialClientes: clientes[];
+    membresiasDisponibles: MembresiaSerializada[];
+}
+
+export function ClientesContent({ initialClientes, membresiasDisponibles }: ClientesContentProps) {
     const {
         filteredClientes,
         busqueda,
@@ -53,7 +63,7 @@ export function ClientesContent({ initialClientes }: ClientesContentProps) {
                 onOpenChange={setIsDialogOpen}
                 onSubmit={onSubmit}
                 clienteActual={clienteActual}
-                membresiasDisponibles={[]}
+                membresiasDisponibles={membresiasDisponibles}
                 saveCliente={saveCliente}
                 autoCreateAccount={true}
             />

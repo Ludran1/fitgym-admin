@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, CheckCircle, XCircle, RefreshCw } from "lucide-react";
-import { authenticatedGet, authenticatedPost } from "@/lib/fetch-utils";
+import { authenticatedFetch } from "@/lib/fetch-utils";
 import { AvatarImage } from "@radix-ui/react-avatar";
 import { JsonObject } from "@prisma/client/runtime/library";
 
@@ -39,7 +39,9 @@ export function PaymentStatusPanel() {
     setLoading(true);
     setError(null);
     try {
-      const json = await authenticatedGet<DashboardPagosResponse>("/api/pagos/dashboard");
+      const response = await fetch("/api/pagos/dashboard");
+      if (!response.ok) throw new Error("Error al cargar datos");
+      const json = await response.json();
       setData(json);
     } catch (e: any) {
       setError(e?.message || "Error desconocido");

@@ -11,19 +11,27 @@ import {
   CartesianGrid,
 } from "recharts";
 import { useEffect, useState } from "react";
-import { authenticatedGet } from "@/lib/fetch-utils";
 
-export function ActivityChart() {
+interface ActivityChartProps {
+  initialData?: Array<{ name: string; asistencias: number }>;
+}
+
+export function ActivityChart({ initialData }: ActivityChartProps = {}) {
   const labels = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
-  const [data, setData] = useState(labels.map((name) => ({ name, asistencias: 0 })));
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState(initialData || labels.map((name) => ({ name, asistencias: 0 })));
+  const [loading, setLoading] = useState(!initialData);
 
   useEffect(() => {
+    if (initialData) return; // No fetch si hay initialData
+    
     const fetchWeekly = async () => {
       try {
         setLoading(true);
-        const weeklyData = await authenticatedGet<typeof data>('/api/dashboard/asistencias-semanales');
-        setData(weeklyData);
+        const response = await fetch('/api/dashboard/asistencias-semanales');
+        if (response.ok) {
+          const weeklyData = await response.json();
+          setData(weeklyData);
+        }
       } catch (error) {
         console.error("Error cargando asistencias semanales:", error);
       } finally {
@@ -32,7 +40,7 @@ export function ActivityChart() {
     };
 
     fetchWeekly();
-  }, []);
+  }, [initialData]);
 
   return (
     <Card className="col-span-4">

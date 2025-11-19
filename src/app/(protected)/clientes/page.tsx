@@ -1,4 +1,5 @@
 import { getClientes, preloadClientes } from "@/lib/data/clientes";
+import { getMembresiasActivas } from "@/lib/data/membresias";
 import { ClientesContent } from "./ClientesContent";
 
 /**
@@ -10,8 +11,11 @@ export default async function ClientesPage() {
   // Precargar datos (opcional, para iniciar fetch temprano)
   preloadClientes();
 
-  // Obtener clientes del servidor (cacheado por React)
-  const clientes = await getClientes();
+  // Obtener clientes y membresías del servidor (cacheado por React)
+  const [clientes, membresias] = await Promise.all([
+    getClientes(),
+    getMembresiasActivas()
+  ]);
 
-  return <ClientesContent initialClientes={clientes} />;
+  return <ClientesContent initialClientes={clientes} membresiasDisponibles={membresias} />;
 }

@@ -8,54 +8,23 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Users, TrendingUp, Clock, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { authenticatedGet } from '@/lib/fetch-utils';
+import type { AforoData } from '@/lib/data/aforo-full';
 
-interface PersonaEnGym {
-    id: string;
-    clienteId: string;
-    nombre: string;
-    avatarUrl: string | null;
-    horaEntrada: string;
-    tiempoTranscurrido: number; // minutos
-    tiempoEstimadoSalida: string;
+interface AforoPanelProps {
+    initialData?: AforoData;
 }
 
-interface AforoData {
-    aforoActual: {
-        personasActuales: number;
-        capacidadMaxima: number;
-        porcentajeOcupacion: number;
-        espaciosDisponibles: number;
-        estado: 'disponible' | 'moderado' | 'lleno' | 'excedido';
-        ultimaActualizacion: string;
-    };
-    personasEnGym: PersonaEnGym[];
-    estadisticasHoy: {
-        totalAsistencias: number;
-        tiempoPromedioMinutos: number;
-        picoAforo: {
-            hora: string;
-            cantidad: number;
-        } | null;
-    };
-    configuracion: {
-        capacidadMaxima: number;
-        tiempoPromedioMinutos: number;
-        alertaPorcentaje: number;
-        horarioApertura: string;
-        horarioCierre: string;
-    };
-}
-
-export function AforoPanel() {
-    const [aforoData, setAforoData] = useState<AforoData | null>(null);
-    const [loading, setLoading] = useState(true);
+export function AforoPanel({ initialData }: AforoPanelProps) {
+    const [aforoData, setAforoData] = useState<AforoData | null>(initialData || null);
+    const [loading, setLoading] = useState(!initialData);
     const [autoRefresh, setAutoRefresh] = useState(true);
     const { toast } = useToast();
 
     const fetchAforoData = async () => {
         try {
-            const data = await authenticatedGet<AforoData>('/api/aforo');
+            const response = await fetch('/api/aforo');
+            if (!response.ok) throw new Error('Error al cargar aforo');
+            const data = await response.json();
             setAforoData(data);
         } catch (error: any) {
             console.error('Error fetching aforo:', error);
@@ -70,14 +39,17 @@ export function AforoPanel() {
     };
 
     useEffect(() => {
-        fetchAforoData();
+        // Solo fetch si no hay initialData
+        if (!initialData) {
+            fetchAforoData();
+        }
 
         // Auto-refresh cada 30 segundos si está activo
         if (autoRefresh) {
             const interval = setInterval(fetchAforoData, 30000);
             return () => clearInterval(interval);
         }
-    }, [autoRefresh]);
+    }, [autoRefresh, initialData]);
 
     const getEstadoColor = (estado: string) => {
         switch (estado) {
