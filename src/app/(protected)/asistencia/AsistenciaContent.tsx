@@ -4,6 +4,8 @@ import { RegistroAsistenciaCard } from "@/components/asistencia/RegistroAsistenc
 import { ListaAsistencias } from "@/components/asistencia/ListaAsistencias";
 import { useState } from "react";
 import type { asistencias, clientes } from "@prisma/client";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 type AsistenciaConCliente = asistencias & {
   clientes: Pick<clientes, 'id' | 'nombre' | 'dni' | 'email' | 'avatar_url' | 'estado'>;
@@ -28,6 +30,13 @@ export function AsistenciaContent({ initialAsistencias }: AsistenciaContentProps
         <p className="text-muted-foreground">
           Registra la asistencia de los miembros del gimnasio
         </p>
+        <div className="pt-2">
+          <Link href="/kiosko" target="_blank" rel="noopener noreferrer">
+            <Button>
+              Abrir Kiosko
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
